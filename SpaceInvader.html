@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Space Invaders</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<style>
+body{margin:0;background:#000;color:#fff;font-family:Arial}
+.hud{display:flex;gap:20px;padding:10px;background:#111}
+.game{width:720px;height:520px;margin:auto;background:#000;position:relative}
+canvas{width:100%;height:100%;display:block}
+.overlay{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  background:rgba(0,0,0,.7);
+  font-size:1.5rem;
+}
+button{
+  padding:10px 18px;
+  font-size:1rem;
+  cursor:pointer;
+  margin-top:15px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="hud">
+  <div>Score : <span id="score">0</span></div>
+  <div>Niveau : <span id="level">1</span></div>
+  <div>Vies : <span id="lives">3</span></div>
+</div>
+
+<div class="game">
+  <canvas id="canvas"></canvas>
+  <img id="enemyImg" src="images et musiques/image Space Invader.png" style="display:none">
+
+  <!-- START -->
+  <div id="startScreen" class="overlay">
+    <div>SPACE INVADERS</div>
+    <button id="startBtn">Jouer</button>
+  </div>
+
+  <!-- GAME OVER -->
+  <div id="gameOverScreen" class="overlay" style="display:none">
+    <div>GAME OVER</div>
+    <button id="retryBtn">Rejouer</button>
+  </div>
+</div>
+
+<script>
+/* ===== CANVAS ===== */
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+canvas.width = 720;
+canvas.height = 520;
+
+/* ===== ELEMENTS ===== */
+const enemyImg = document.getElementById("enemyImg");
+const scoreEl = document.getElementById("score");
+const levelEl = document.getElementById("level");
+const livesEl = document.getElementById("lives");
+
+const startScreen = document.getElementById("startScreen");
+const gameOverScreen = document.getElementById("gameOverScreen");
+
+/* ===== GAME STATE ===== */
+let running = false;
+let score = 0;
+let level = 1;
+let lives = 3;
+
+/* ===== PLAYER ===== */
+const player = {
+  x: 360,
+  y: 480,
+  w: 40,
+  h: 20,
+  speed: 320,
+  cooldown: 250,
+  lastShot: 0
+};
+
+/* ===== INPUT ===== */
+const keys = { left:false, right:false, fire:false };
+addEventListener("keydown",e=>{
+  if(e.key==="ArrowLeft") keys.left=true;
+  if(e.key==="ArrowRight") keys.right=true;
+  if(e.key===" ") keys.fire=true;
+});
+addEventListener("keyup",e=>{
+  if(e.key==="ArrowLeft") keys.left=false;
+  if(e.key==="ArrowRight") keys.right=false;
+  if(e.key===" ") keys.fire=false;
+});
+
+/* ===== OBJECTS ===== */
+const bullets=[];
+const enemyBullets=[];
+const invaders=[];
+let invDir=1;
+
+/* ===== INVADERS ===== */
+function buildInvaders(){
+  invaders.length=0;
+  for(let r=0;r<4;r++){
+    for(let c=0;c<10;c++){
+      invaders.push({
+        x:80+c*60,
+        y:50+r*45,
+        w:30,h:30,
+        alive:true
+      });
+    }
+  }
+}
+
+/* ===== START GAME ===== */
+function startGame(){
+  score = 0;
+  level = 1;
+  lives = 3;
+  running = true;
+
+  bullets.length = 0;
+  enemyBullets.length = 0;
+
+  buildInvaders();
+  updateHUD();
+
+  startScreen.style.display="none";
+  gameOverScreen.style.display="none";
+}
+
+/* ===== NEXT LEVEL ===== */
+function nextLevel(){
+  level++;
+  lives = 3; // 🔥 vies réinitialisées
+  bullets.length = 0;
+  enemyBullets.length = 0;
+  invDir = 1;
+  buildInvaders();
+  updateHUD();
+}
+
+/* ===== GAME OVER ===== */
+function gameOver(){
+  running = false;
+  gameOverScreen.style.display="flex";
+}
+
+/* ===== HUD ===== */
+function updateHUD(){
+  scoreEl.textContent = score;
+  levelEl.textContent = level;
+  livesEl.textContent = lives;
+}
+
+/* ===== UPDATE ===== */
+function update(dt){
+  if(!running) return;
+
+  // Player move
+  if(keys.left) player.x -= player.speed*dt;
+  if(keys.right) player.x += player.speed*dt;
+  player.x = Math.max(player.w/2, Math.min(720-player.w/2, player.x));
+
+  // Player fire
+  if(keys.fire){
+    const now = performance.now();
+    if(now-player.lastShot>player.cooldown){
+      bullets.push({x:player.x,y:player.y});
+      player.lastShot = now;
+    }
+  }
+
+  bullets.forEach(b=>b.y-=420*dt);
+  enemyBullets.forEach(b=>b.y+=(260+level*30)*dt);
+
+  // Invaders move (PLUS RAPIDES CHAQUE NIVEAU)
+  let minX=Infinity,maxX=-Infinity;
+  invaders.forEach(i=>{
+    if(!i.alive) return;
+    i.x += invDir*(70+level*20)*dt;
+    minX=Math.min(minX,i.x);
+    maxX=Math.max(maxX,i.x);
+  });
+
+  if(minX<20||maxX>700){
+    invDir*=-1;
+    invaders.forEach(i=>i.y+=15);
+  }
+
+  // Enemy fire (plus fréquent par niveau)
+  if(Math.random()<dt*(0.4+level*0.3)){
+    const shooters=invaders.filter(i=>i.alive);
+    if(shooters.length){
+      const s=shooters[Math.floor(Math.random()*shooters.length)];
+      enemyBullets.push({x:s.x,y:s.y});
+    }
+  }
+
+  // Collisions player bullets
+  bullets.forEach(b=>{
+    invaders.forEach(i=>{
+      if(i.alive &&
+        b.x>i.x-i.w/2 && b.x<i.x+i.w/2 &&
+        b.y>i.y-i.h/2 && b.y<i.y+i.h/2){
+        i.alive=false;
+        b.y=-100;
+        score+=10;
+        updateHUD();
+      }
+    });
+  });
+
+  // Collisions enemy bullets
+  enemyBullets.forEach(b=>{
+    if(
+      b.x>player.x-player.w/2 && b.x<player.x+player.w/2 &&
+      b.y>player.y-player.h/2 && b.y<player.y+player.h/2
+    ){
+      b.y=999;
+      lives--;
+      updateHUD();
+      if(lives<=0) gameOver();
+    }
+  });
+
+  // Cleanup
+  bullets.splice(0,bullets.length,...bullets.filter(b=>b.y>0));
+  enemyBullets.splice(0,enemyBullets.length,...enemyBullets.filter(b=>b.y<520));
+
+  // Level complete
+  if(!invaders.some(i=>i.alive)){
+    nextLevel();
+  }
+}
+
+/* ===== DRAW ===== */
+function draw(){
+  ctx.fillStyle="#000";
+  ctx.fillRect(0,0,720,520);
+
+  // Player
+  ctx.fillStyle="#0ff";
+  ctx.beginPath();
+  ctx.moveTo(player.x,player.y-10);
+  ctx.lineTo(player.x-20,player.y+10);
+  ctx.lineTo(player.x+20,player.y+10);
+  ctx.fill();
+
+  // Invaders
+  invaders.forEach(i=>{
+    if(!i.alive) return;
+    if(enemyImg.complete && enemyImg.naturalWidth){
+      ctx.drawImage(enemyImg,i.x-i.w/2,i.y-i.h/2,i.w,i.h);
+    }else{
+      ctx.fillStyle="#f55";
+      ctx.fillRect(i.x-i.w/2,i.y-i.h/2,i.w,i.h);
+    }
+  });
+
+  // Bullets
+  ctx.fillStyle="#fff";
+  bullets.forEach(b=>ctx.fillRect(b.x-2,b.y-6,4,8));
+  ctx.fillStyle="#f00";
+  enemyBullets.forEach(b=>ctx.fillRect(b.x-2,b.y,4,8));
+}
+
+/* ===== LOOP ===== */
+let last=0;
+function loop(t){
+  const dt=(t-last)/1000;
+  last=t;
+  update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+/* ===== BUTTONS ===== */
+document.getElementById("startBtn").onclick = startGame;
+document.getElementById("retryBtn").onclick = startGame;
+</script>
+
+</body>
+</html>

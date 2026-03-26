@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Flappy Bird</title>
+<style>
+body {margin:0;overflow:hidden;font-family:Arial,sans-serif;background:linear-gradient(#87ceeb,#4aa0ff);}
+#game-container{width:100vw;height:100vh;position:relative;overflow:hidden;}
+canvas{position:absolute;top:0;left:0;z-index:5;width:100%;height:100%;}
+#ui{position:absolute;top:0;left:0;width:100%;height:100%;z-index:10;pointer-events:none;}
+.panel{position:absolute;width:100%;top:60px;text-align:center;pointer-events:auto;transition:all 0.3s;}
+.panel.hidden{opacity:0;pointer-events:none;}
+.panel h1,.panel h2{color:white;text-shadow:3px 3px 4px #000;margin-bottom:20px;}
+.panel button{display:inline-block;margin:10px 12px;padding:14px 28px;font-size:22px;font-weight:bold;border-radius:12px;border:none;background:linear-gradient(#ffd75e,#ffb347);cursor:pointer;transition:0.3s;box-shadow:0 8px 20px rgba(0,0,0,0.25);}
+.panel button:hover{transform:translateY(-2px);background:linear-gradient(#ffe391,#ffc04d);}
+#score-display{position:absolute;top:20px;width:100%;text-align:center;font-size:48px;font-weight:bold;color:#fff;text-shadow:3px 3px 4px black;z-index:12;}
+#skins{margin-top:20px;display:inline-flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+.skin{width:120px;padding:12px;border-radius:14px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;text-shadow:2px 2px 6px rgba(0,0,0,0.4);backdrop-filter:blur(6px);}
+.skin .title{font-weight:bold;margin-bottom:8px;}
+.skin .key{font-size:18px;padding:4px 8px;border-radius:8px;background:rgba(0,0,0,0.3);display:inline-block;}
+.footer{position:absolute;bottom:18px;width:100%;text-align:center;color:rgba(255,255,255,0.9);font-size:14px;text-shadow:2px 2px 6px rgba(0,0,0,0.4);}
+.hidden{display:none;}
+</style>
+</head>
+<body>
+<div id="game-container">
+    <canvas id="gameCanvas"></canvas>
+    <div id="ui">
+        <div id="menu-main" class="panel">
+            <h1>FLAPPY BIRD</h1>
+            <button onclick="UI.startGame()">Jouer</button>
+            <div id="skins">
+                <div class="skin"><div class="title">Jaune</div><div class="key">S</div></div>
+                <div class="skin"><div class="title">Rouge</div><div class="key">Z</div></div>
+                <div class="skin"><div class="title">Bleu</div><div class="key">X</div></div>
+                <div class="skin"><div class="title">Vert</div><div class="key">A</div></div>
+                <div class="skin"><div class="title">Rose</div><div class="key">Q</div></div>
+                <div class="skin"><div class="title">Orange</div><div class="key">E</div></div>
+                <div class="skin"><div class="title">Arc-en-ciel</div><div class="key">W</div></div>
+            </div>
+        </div>
+        <div id="menu-gameover" class="panel hidden">
+            <h2>Game Over</h2>
+            <p id="go-score"></p>
+            <p id="go-best"></p>
+            <button onclick="UI.restart()">Rejouer</button>
+            <button onclick="UI.returnMenu()">Menu</button>
+        </div>
+        <div id="score-display" class="hidden">0</div>
+    </div>
+</div>
+
+<script>
+// ===== CANVAS =====
+const canvas=document.getElementById("gameCanvas");
+const ctx=canvas.getContext("2d");
+function resizeCanvas(){canvas.width=window.innerWidth;canvas.height=window.innerHeight;}
+window.addEventListener("resize",resizeCanvas);
+resizeCanvas();
+
+// ===== VARIABLES =====
+let lastTime=0,delta=0,gameRunning=false;
+let scrollSpeed=1.2,pipeGap=180,pipeInterval=2500;
+let bird,pipes=[],score=0;
+let bestScore=localStorage.getItem("bestScore")||0;
+let protectedMode=true,protectionTimer=180;
+
+// ===== SONS =====
+const bgMusic=new Audio("https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3");
+bgMusic.loop=true;bgMusic.volume=0.2;
+const sounds={point:new Audio("https://actions.google.com/sounds/v1/cartoon/pop.ogg"),hit:new Audio("https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg")};
+function initAudio(){bgMusic.currentTime=0;bgMusic.play().catch(()=>{});}
+
+// ===== SKINS =====
+const skins={s:"yellow",z:"red",x:"blue",a:"green",q:"pink",e:"orange"};
+let rainbowFrame=0;
+function getRainbowColor(){const colors=["red","orange","yellow","green","blue","indigo","violet"];rainbowFrame=(rainbowFrame+1)%colors.length;return colors[rainbowFrame];}
+let effects=[];
+function addEffect(x,y,skin){effects.push({x,y,life:30,skin});}
+function updateEffects(){for(let e of effects){e.life--;e.x-=scrollSpeed;}effects=effects.filter(e=>e.life>0);}
+function drawEffects(ctx){for(let e of effects){ctx.globalAlpha=e.life/30;ctx.fillStyle=e.skin==="rainbow"?getRainbowColor():e.skin;ctx.beginPath();ctx.arc(e.x,e.y,5,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;}}
+
+// ===== BIRD =====
+class Bird{
+    constructor(){this.x=60;this.y=canvas.height/2;this.width=30;this.height=20;this.velocity=0;this.gravity=0.35;this.jumpStrength=-6;this.skin="yellow";}
+    update(dt){if(protectedMode){this.y=canvas.height/2+Math.sin(Date.now()*0.005)*5;this.velocity=0;}else{this.velocity+=this.gravity*dt;this.y+=this.velocity*dt;}addEffect(this.x-10,this.y,this.skin);}
+    draw(ctx){ctx.fillStyle=this.skin==="rainbow"?getRainbowColor():this.skin;ctx.beginPath();ctx.ellipse(this.x,this.y,this.width/2,this.height/2,0,0,Math.PI*2);ctx.fill();}
+    jump(){if(!protectedMode){this.velocity=this.jumpStrength; /* sounds.jump.play(); supprimé */}}
+}
+
+// ===== PIPES =====
+class Pipe{
+    constructor(x,height,isTop=false){this.x=x;this.y=isTop?0:canvas.height-height-40;this.width=60;this.height=height;this.offscreen=false;this.passed=false;}
+    update(dt){this.x-=scrollSpeed*dt;if(this.x+this.width<0)this.offscreen=true;}
+    draw(ctx){ctx.fillStyle="#228B22";ctx.fillRect(this.x,this.y,this.width,this.height);}
+    collides(bird){const pad=5;return !(bird.x+bird.width-pad<this.x || bird.x+pad>this.x+this.width || bird.y+bird.height-pad<this.y || bird.y+pad>this.y+this.height);}
+}
+
+// ===== PIPE GENERATOR =====
+const PipeGenerator={timer:0,update(dt){
+    this.timer+=dt*16.67;
+    if(this.timer>=pipeInterval){
+        this.timer=0;
+        let topH=Math.random()*150+30;
+        let bottomH=canvas.height-topH-pipeGap-40;
+        pipes.push(new Pipe(canvas.width,topH,true));
+        pipes.push(new Pipe(canvas.width,bottomH,false));
+    }
+}};
+
+// ===== UI =====
+const UI={
+    showScore:s=>{score=s;document.getElementById("score-display").textContent=s;document.getElementById("score-display").classList.remove("hidden");},
+    showGameOver:()=>{document.getElementById("menu-gameover").classList.remove("hidden");document.getElementById("go-score").textContent="Score : "+score;document.getElementById("go-best").textContent="Meilleur : "+bestScore;},
+    restart:()=>{initGame();document.getElementById("menu-gameover").classList.add("hidden");},
+    returnMenu:()=>{document.getElementById("menu-main").classList.remove("hidden");document.getElementById("menu-gameover").classList.add("hidden");document.getElementById("score-display").classList.add("hidden");bgMusic.pause();bgMusic.currentTime=0;},
+    startGame:()=>{document.getElementById("menu-main").classList.add("hidden");initGame();initAudio();}
+};
+
+// ===== INIT =====
+function initGame(){ 
+    bird=new Bird(); 
+    pipes=[]; 
+    scrollSpeed=1.2; pipeGap=180; pipeInterval=2500; 
+    score=0; gameRunning=true; 
+    bird.y=canvas.height/2; bird.velocity=0; 
+    protectedMode=true; protectionTimer=180;
+    PipeGenerator.timer=0; 
+    lastTime=performance.now();
+    requestAnimationFrame(gameLoop);
+}
+
+// ===== UPDATE =====
+function update(dt){
+    if(!gameRunning) return;
+    if(protectedMode){protectionTimer-=dt;if(protectionTimer<=0)protectedMode=false;}
+    bird.update(dt); updateEffects(); PipeGenerator.update(dt);
+    for(let pipe of pipes){pipe.update(dt);}
+    pipes=pipes.filter(p=>!p.offscreen);
+    if(!protectedMode){
+        for(let pipe of pipes){
+            if(!pipe.passed && pipe.x+pipe.width<bird.x){pipe.passed=true;score+=1;UI.showScore(Math.floor(score));sounds.point.play();}
+            if(pipe.collides(bird)){sounds.hit.play();endGame();return;}
+        }
+        if(bird.y>canvas.height-40){bird.y=canvas.height-40;sounds.hit.play();endGame();return;}
+    }
+}
+
+// ===== DRAW =====
+function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle="#87ceeb";ctx.fillRect(0,0,canvas.width,canvas.height);
+    for(let pipe of pipes) pipe.draw(ctx);
+    drawEffects(ctx);
+    bird.draw(ctx);
+    ctx.fillStyle="#DEB887";ctx.fillRect(0,canvas.height-40,canvas.width,40);
+}
+
+// ===== GAME LOOP =====
+function gameLoop(timestamp){
+    delta=(timestamp-lastTime)/16.67; 
+    lastTime=timestamp;
+    update(delta);
+    draw();
+    if(gameRunning) requestAnimationFrame(gameLoop);
+}
+
+// ===== END GAME =====
+function endGame(){ 
+    gameRunning=false; 
+    if(score>bestScore){bestScore=score; localStorage.setItem("bestScore",bestScore);} 
+    UI.showGameOver(); 
+}
+
+// ===== CONTROLS =====
+window.addEventListener("keydown",e=>{
+    if(e.code==="Space"){bird.jump();}
+    const key=e.key.toLowerCase();
+    if(skins[key]) bird.skin=skins[key];
+    if(key==="w") bird.skin="rainbow";
+});
+window.addEventListener("click",()=>{bird.jump();});
+
+</script>
+</body>
+</html>

@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Jeu d'Énigmes</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    min-height: 100vh;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: radial-gradient(circle at top, #2b2b2b, #0f0f0f);
+    color: #fff;
+}
+
+/* Carte centrale */
+.container {
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 20px;
+    padding: 40px;
+    width: 420px;
+    max-width: 90%;
+    box-shadow: 0 0 30px rgba(0, 255, 255, 0.15);
+    text-align: center;
+    animation: fadeIn 0.6s ease;
+}
+
+/* Titres */
+h1 {
+    margin-top: 0;
+    font-size: 2.2em;
+    color: #00ffff;
+    text-shadow: 0 0 10px rgba(0, 255, 255, 0.6);
+}
+
+h3 {
+    margin-bottom: 20px;
+    color: #ffd700;
+}
+
+/* Énigme */
+#enigme {
+    font-size: 1.1em;
+    margin-bottom: 25px;
+    line-height: 1.4;
+}
+
+/* Input */
+input {
+    width: 100%;
+    padding: 12px 15px;
+    font-size: 16px;
+    border-radius: 10px;
+    border: none;
+    outline: none;
+    margin-bottom: 15px;
+    background: #1e1e1e;
+    color: #fff;
+}
+
+input::placeholder {
+    color: #aaa;
+}
+
+/* Boutons */
+button {
+    background: linear-gradient(135deg, #00c6ff, #0072ff);
+    border: none;
+    border-radius: 25px;
+    color: #fff;
+    padding: 12px 25px;
+    font-size: 16px;
+    cursor: pointer;
+    margin: 8px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 5px 15px rgba(0, 114, 255, 0.4);
+}
+
+button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 114, 255, 0.6);
+}
+
+/* Bouton reset */
+button:last-of-type {
+    background: linear-gradient(135deg, #ff4e50, #f00000);
+    box-shadow: 0 5px 15px rgba(255, 0, 0, 0.4);
+}
+
+/* Messages */
+#message {
+    margin-top: 20px;
+    font-size: 18px;
+    font-weight: bold;
+    min-height: 24px;
+}
+
+/* Timer */
+#timer {
+    margin-top: 10px;
+    font-size: 18px;
+    font-weight: bold;
+    color: #ffea00;
+    text-shadow: 0 0 5px rgba(255, 234, 0, 0.8);
+}
+
+/* Animation */
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+    <h1>Jeu d'Énigmes</h1>
+    <h3 id="levelTitle">Niveau 1</h3>
+
+    <p id="enigme">Énigme :</p>
+
+    <input type="text" id="codeInput" placeholder="Tape ta réponse ici">
+    <br>
+    <button onclick="checkCode()">Valider</button>
+
+    <p id="message"></p>
+    <p id="timer"></p>
+
+    <button onclick="resetProgress()">Réinitialiser la progression</button>
+</div>
+
+<script>
+const enigmes = [
+    { question: "Je rase tous les jours pourtant j'ai toujours de la barbe", answer: "barbier", timed: true, time: 30  },
+    { question: "Je suis petit et rond, je roule souvent, mais je ne suis pas une boule. Qui suis-je ?", answer: "roue", timed: true, time: 30  },
+    { question: "Inverse le mot 'desserts'.", answer: "stressed" },
+    { question: "Quel est le résultat de 6 × 7 ?", answer: "42", timed: true, time: 5 },
+    { question: "Je fais le tour du monde tout en restant dans mon coin. Qui suis-je ?", answer: "timbre", timed: true, time: 10  },
+    { question: "Plus j'ai de gardiens, moins je suis gardé. Qui suis-je ?", answer: "secret" , timed: true, time: 30 },
+    { question: "Je commence la nuit et je termine le matin, qui suis-je ?", answer: "n", timed: true, time: 30  }
+];
+
+let level = 0;
+let timerInterval = null;
+
+const levelTitle = document.getElementById('levelTitle');
+const enigmeP = document.getElementById('enigme');
+const message = document.getElementById('message');
+const timerDisplay = document.getElementById('timer');
+const input = document.getElementById('codeInput');
+
+function loadProgress() {
+    const savedLevel = localStorage.getItem("enigmeLevel");
+    if (savedLevel !== null) level = parseInt(savedLevel);
+    showEnigme();
+}
+
+function saveProgress() {
+    localStorage.setItem("enigmeLevel", level);
+}
+
+function resetProgress() {
+    localStorage.removeItem("enigmeLevel");
+    level = 0;
+    message.textContent = "";
+    input.disabled = false;
+    clearInterval(timerInterval);
+    timerDisplay.textContent = "";
+    showEnigme();
+}
+
+function showEnigme() {
+    clearInterval(timerInterval);
+    timerDisplay.textContent = "";
+    input.disabled = false;
+
+    if (level >= enigmes.length) {
+        levelTitle.textContent = "🎉 Félicitations !";
+        enigmeP.textContent = "";
+        message.textContent = "Tu as terminé toutes les énigmes 👑";
+        return;
+    }
+
+    levelTitle.textContent = `Niveau ${level + 1}`;
+    enigmeP.textContent = enigmes[level].question;
+    message.textContent = "";
+    input.value = "";
+
+    if (enigmes[level].timed) {
+        let timeLeft = enigmes[level].time;
+        timerDisplay.textContent = `⏱ Temps restant : ${timeLeft}s`;
+
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            timerDisplay.textContent = `⏱ Temps restant : ${timeLeft}s`;
+
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                message.textContent = "⏰ Temps écoulé !";
+                message.style.color = "#f00";
+                input.disabled = true;
+            }
+        }, 1000);
+    }
+}
+
+function checkCode() {
+    if (level >= enigmes.length) return;
+
+    const value = input.value.trim().toLowerCase();
+    if (value === enigmes[level].answer.toLowerCase()) {
+        clearInterval(timerInterval);
+        message.textContent = "✅ Correct !";
+        message.style.color = "#0f0";
+        level++;
+        saveProgress();
+        setTimeout(showEnigme, 1000);
+    } else {
+        message.textContent = "❌ Mauvaise réponse";
+        message.style.color = "#f00";
+    }
+}
+
+loadProgress();
+</script>
+
+</body>
+</html>

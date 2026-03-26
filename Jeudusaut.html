@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jeu du saut</title>
+
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body, html {
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #2c3e50;
+    font-family: Arial, sans-serif;
+    color: white;
+  }
+
+  #game {
+    width: 500px;
+    height: 400px;
+    position: relative;
+    background-color: #34495e;
+    border: 2px solid white;
+    overflow: hidden;
+  }
+
+  #player {
+    width: 50px;
+    height: 50px;
+    position: absolute;
+    top: 350px; /* sol */
+    left: 50px;
+    background-image: url("images et musiques/ninja.png"); /* chemin corrigé */
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    transition: transform 0.2s;
+  }
+
+  .obstacle {
+    width: 40px;
+    height: 40px;
+    position: absolute;
+    background-color: #3498db;
+  }
+  .obstacle.bottom { top: 350px; }
+  .obstacle.top { top: 0px; }
+
+  .coin {
+    width: 30px;
+    height: 30px;
+    background-color: gold;
+    position: absolute;
+    border-radius: 50%;
+  }
+
+  #score, #lives {
+    position: absolute;
+    top: 10px;
+    font-size: 18px;
+  }
+  #lives { right: 10px; }
+
+  #gameOver {
+    position: absolute;
+    top: 45%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 30px;
+    font-weight: bold;
+    display: none;
+  }
+
+  #replayBtn {
+    position: absolute;
+    top: 60%;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 20px;
+    font-size: 18px;
+    background-color: #27ae60;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    display: none;
+  }
+  #replayBtn:hover { background-color: #2ecc71; }
+</style>
+</head>
+
+<body>
+
+<div id="game">
+  <div id="player"></div>
+  <div id="score">Score: 0</div>
+  <div id="lives">Vies: 3</div>
+  <div id="gameOver">GAME OVER</div>
+  <button id="replayBtn">Rejouer</button>
+</div>
+
+<audio id="bgMusic" src="images et musiques/machtu pichtou.mp3" loop></audio>
+
+<script>
+const game = document.getElementById("game");
+const player = document.getElementById("player");
+const scoreDisplay = document.getElementById("score");
+const livesDisplay = document.getElementById("lives");
+const gameOverScreen = document.getElementById("gameOver");
+const replayButton = document.getElementById("replayBtn");
+const bgMusic = document.getElementById("bgMusic");
+
+let score = 0;
+let lives = 3;
+let isOnCeiling = false;
+let playerY = 350; // sol
+let isGameOver = false;
+let obstacles = [];
+let coins = [];
+let speed = 3;
+let obstacleInterval;
+let coinInterval;
+let gameInterval;
+let musicStarted = false;
+let firstSpacePress = true;
+
+function restartGame() {
+  score = 0;
+  lives = 3;
+  speed = 3;
+  isOnCeiling = false;
+  playerY = 350;
+  isGameOver = false;
+  firstSpacePress = true;
+
+  obstacles.forEach(o => o.remove());
+  coins.forEach(c => c.remove());
+  obstacles = [];
+  coins = [];
+
+  player.style.top = playerY + "px";
+  player.style.transform = "rotate(0deg)";
+  scoreDisplay.textContent = "Score: 0";
+  livesDisplay.textContent = "Vies: 3";
+
+  gameOverScreen.style.display = "none";
+  replayButton.style.display = "none";
+
+  bgMusic.currentTime = 0;
+  bgMusic.play();
+
+  obstacleInterval = setInterval(generateObstacles, 2000);
+  coinInterval = setInterval(generateCoins, 1500);
+  gameInterval = setInterval(updateGame, 1000);
+}
+
+function jump() {
+  if (isGameOver) return;
+
+  if (firstSpacePress) {
+    playerY = 0; // plafond
+    player.style.top = playerY + "px";
+    firstSpacePress = false;
+    isOnCeiling = true;
+    return;
+  }
+
+  if (isOnCeiling) {
+    isOnCeiling = false;
+    playerY = 350; // sol
+    player.style.transform = "rotate(0deg)";
+  } else {
+    isOnCeiling = true;
+    playerY = 0; // plafond
+    player.style.transform = "rotate(180deg)";
+  }
+
+  player.style.top = playerY + "px";
+}
+
+function generateObstacles() {
+  if (isGameOver) return;
+
+  let obstacle = document.createElement("div");
+  obstacle.classList.add("obstacle");
+  const isTop = Math.random() > 0.5;
+  obstacle.classList.add(isTop ? "top" : "bottom");
+  obstacle.style.left = game.offsetWidth + "px";
+
+  game.appendChild(obstacle);
+  obstacles.push(obstacle);
+
+  let obstacleSpeed = speed + Math.random() * 2;
+
+  let interval = setInterval(() => {
+    let left = parseInt(obstacle.style.left) - obstacleSpeed;
+    obstacle.style.left = left + "px";
+
+    if (left < -40) {
+      clearInterval(interval);
+      obstacle.remove();
+    }
+
+    const o = obstacle.getBoundingClientRect();
+    const p = player.getBoundingClientRect();
+
+    if (p.left < o.right && p.right > o.left && p.top < o.bottom && p.bottom > o.top) {
+      endGame();
+    }
+  }, 20);
+}
+
+function generateCoins() {
+  if (isGameOver) return;
+
+  let coin = document.createElement("div");
+  coin.classList.add("coin");
+  coin.style.left = game.offsetWidth + "px";
+  const isTop = Math.random() > 0.5;
+  coin.style.top = isTop ? "20px" : "350px";
+
+  game.appendChild(coin);
+  coins.push(coin);
+
+  let coinSpeed = speed + Math.random();
+
+  let interval = setInterval(() => {
+    let left = parseInt(coin.style.left) - coinSpeed;
+    coin.style.left = left + "px";
+
+    if (left < -40) {
+      clearInterval(interval);
+      coin.remove();
+    }
+
+    const c = coin.getBoundingClientRect();
+    const p = player.getBoundingClientRect();
+
+    if (p.left < c.right && p.right > c.left && p.top < c.bottom && p.bottom > c.top) {
+      clearInterval(interval);
+      coin.remove();
+      score += 10;
+      scoreDisplay.textContent = "Score: " + score;
+    }
+  }, 20);
+}
+
+function endGame() {
+  isGameOver = true;
+  gameOverScreen.style.display = "block";
+  replayButton.style.display = "block";
+  bgMusic.pause();
+
+  clearInterval(obstacleInterval);
+  clearInterval(coinInterval);
+  clearInterval(gameInterval);
+}
+
+function updateGame() {
+  if (score > 0 && score % 50 === 0) {
+    speed += 0.2;
+  }
+}
+
+obstacleInterval = setInterval(generateObstacles, 2000);
+coinInterval = setInterval(generateCoins, 1500);
+gameInterval = setInterval(updateGame, 1000);
+
+document.addEventListener("keydown", (e) => {
+  if (e.code === "Space") {
+    if (!musicStarted) {
+      bgMusic.volume = 0.5;
+      bgMusic.play();
+      musicStarted = true;
+    }
+    jump();
+  }
+});
+
+replayButton.addEventListener("click", restartGame);
+</script>
+
+</body>
+</html>

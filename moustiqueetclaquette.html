@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<title>Moustiques Ultimate</title>
+<style>
+body{margin:0;overflow:hidden;font-family:Arial,sans-serif;user-select:none;cursor:none;transition:background 1s;background:#009dff}
+body.night{background:#08131f}
+#hud{position:absolute;top:10px;left:10px;z-index:20;padding:12px 18px;border-radius:8px;font-size:22px;background:rgba(255,255,255,0.9);box-shadow:0 0 5px rgba(0,0,0,0.3);display:none}
+#combo{font-size:20px;color:#e74c3c;margin-left:15px}
+#menu,#endScreen{position:absolute;top:15%;width:100%;text-align:center;z-index:30}
+.panel{display:inline-block;background:rgba(255,255,255,0.95);padding:30px 50px;border-radius:15px;box-shadow:0 0 10px rgba(0,0,0,0.4)}
+button,select{font-size:22px;padding:10px 18px;margin-top:10px;cursor:pointer;border-radius:8px;border:none}
+button{background:#3aa757;color:white}button:hover{background:#2c7f40}
+.insecte{position:absolute;width:80px;height:80px;cursor:pointer;z-index:5;transition:left 0.8s linear, top 0.8s linear, transform 0.5s ease-in-out}
+#claquette{position:absolute;width:80px;height:80px;pointer-events:none;z-index:50;transition:transform 0.1s}
+.splat{position:absolute;width:50px;height:50px;border-radius:50%;background:red;pointer-events:none;opacity:0.7;z-index:10;animation:splatAnim 0.3s forwards}
+@keyframes splatAnim{0%{transform:scale(0.3);opacity:1}100%{transform:scale(1);opacity:0}}
+#endScreen{display:none}
+</style>
+</head>
+<body>
+
+<div id="hud">
+⏱ Temps : <span id="chrono">90</span>s | 🎯 Score : <span id="score">0</span> | 🏆 Record : <span id="best">0</span>
+<span id="combo"></span>
+</div>
+
+<div id="menu">
+<div class="panel">
+<h1>🦟 Moustiques et claquettes</h1>
+<h3>Mode :</h3>
+<select id="mode">
+<option value="easy">Facile</option>
+<option value="normal">Normal</option>
+<option value="hard">Difficile</option>
+</select>
+<h3>Thème :</h3>
+<select id="theme">
+<option value="day">Jour</option>
+<option value="night">Nuit</option>
+</select>
+<br><br>
+<button id="start">Démarrer</button>
+<br>
+<button id="resetScore">Réinitialiser le meilleur score</button>
+</div>
+</div>
+
+<div id="endScreen">
+<div class="panel">
+<h2>⏰ Temps écoulé !</h2>
+<p>Score : <span id="finalScore">0</span></p>
+<p>Meilleur score : <span id="finalBest">0</span></p>
+<button id="restart">Rejouer</button>
+</div>
+</div>
+
+<div id="claquette">
+<svg viewBox="0 0 100 100"><rect x="40" y="0" width="20" height="60" fill="#964B00"/><rect x="35" y="60" width="30" height="40" fill="#d2a679"/></svg>
+</div>
+
+<!-- Son moustique Pixabay -->
+<audio id="mosquitoSound" loop>
+<source src="images et musiques/flying-mosquito-105770(1).mp3" type="audio/mpeg">
+</audio>
+
+<audio id="slap" src="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAABErAAABAAgAZGF0YQAAAAA="></audio>
+
+<script>
+let score=0,best=parseInt(localStorage.getItem("bestScore"))||0,timeLeft=90,timer,spawnTimer,insects=[],gameRunning=false,speed=1300,combo=0,lastClickTime=0,maxInsects=12;
+const claquette=document.getElementById("claquette");
+const hud=document.getElementById("hud");
+const menu=document.getElementById("menu");
+const endScreen=document.getElementById("endScreen");
+const comboDisplay=document.getElementById("combo");
+const mosquitoSound=document.getElementById("mosquitoSound");
+document.getElementById("best").textContent=best;
+
+const SVG_moustique=`<svg viewBox="0 0 100 100"><ellipse cx="50" cy="60" rx="18" ry="28" fill="#333"/><circle cx="50" cy="35" r="12" fill="#333"/><circle cx="45" cy="32" r="4" fill="white"/><circle cx="55" cy="32" r="4" fill="white"/><circle cx="45" cy="32" r="2" fill="black"/><circle cx="55" cy="32" r="2" fill="black"/><ellipse cx="30" cy="45" rx="10" ry="25" fill="#99ccff" opacity="0.6"/><ellipse cx="70" cy="45" rx="10" ry="25" fill="#99ccff" opacity="0.6"/><line x1="50" y1="23" x2="50" y2="5" stroke="#444" stroke-width="3"/></svg>`;
+const SVG_frelon=`<svg viewBox="0 0 100 100"><ellipse cx="50" cy="65" rx="20" ry="32" fill="#b8860b"/><rect x="40" y="35" width="20" height="25" fill="#654321"/><circle cx="50" cy="30" r="12" fill="#654321"/><circle cx="45" cy="28" r="4" fill="white"/><circle cx="55" cy="28" r="4" fill="white"/><ellipse cx="30" cy="50" rx="10" ry="28" fill="#ffee99" opacity="0.6"/><ellipse cx="70" cy="50" rx="10" ry="28" fill="#ffee99" opacity="0.6"/></svg>`;
+const SVG_mouche=`<svg viewBox="0 0 100 100"><circle cx="50" cy="55" r="22" fill="#222"/><circle cx="50" cy="30" r="14" fill="#111"/><circle cx="42" cy="28" r="4" fill="white"/><circle cx="58" cy="28" r="4" fill="white"/><ellipse cx="30" cy="50" rx="12" ry="25" fill="#aaf" opacity="0.6"/><ellipse cx="70" cy="50" rx="12" ry="25" fill="#aaf" opacity="0.6"/></svg>`;
+
+window.addEventListener("mousemove",e=>{claquette.style.left=(e.clientX-40)+"px";claquette.style.top=(e.clientY-40)+"px"});
+document.getElementById("start").addEventListener("click",startGame);
+document.getElementById("restart").addEventListener("click",startGame);
+
+document.getElementById("resetScore").addEventListener("click", () => {
+  if(confirm("⚠️ Êtes-vous sûr de vouloir réinitialiser le meilleur score ?")) {
+    if(confirm("❗ Vraiment sûr ? Cette action est irréversible !")) {
+      localStorage.removeItem("bestScore");
+      best = 0;
+      document.getElementById("best").textContent = best;
+      alert("✅ Le meilleur score a été réinitialisé !");
+    }
+  }
+});
+
+function startGame(){
+  gameRunning=true;score=0;timeLeft=90;combo=0;comboDisplay.textContent="";
+  document.getElementById("score").textContent=score;
+  document.getElementById("chrono").textContent=timeLeft;
+  menu.style.display="none";endScreen.style.display="none";hud.style.display="block";
+
+  const theme=document.getElementById("theme").value;
+  document.body.classList.toggle("night",theme==="night");
+
+  const mode=document.getElementById("mode").value;
+  if(mode==="easy"){speed=1300;maxInsects=15;}
+  else if(mode==="normal"){speed=1100;maxInsects=25;}
+  else{speed=900;maxInsects=35;}
+
+  mosquitoSound.volume=0.3;
+  mosquitoSound.play().catch(e=>console.log("Erreur son moustique:",e));
+
+  for(let i=0;i<10;i++)spawnInsect();
+  animateInsects();
+  spawnTimer=setInterval(()=>{if(insects.length<maxInsects)spawnInsect();},2000);
+
+  timer=setInterval(()=>{
+    timeLeft--;
+    document.getElementById("chrono").textContent=timeLeft;
+    if(timeLeft<=0)endGame();
+  },1000);
+}
+
+function spawnInsect(){
+  const el=document.createElement("div");el.className="insecte";
+  const type=Math.floor(Math.random()*3);el.dataset.type=type;
+  if(type===0)el.innerHTML=SVG_moustique;
+  else if(type===1)el.innerHTML=SVG_frelon;
+  else el.innerHTML=SVG_mouche;
+  el.style.left=Math.random()*(window.innerWidth-100)+"px";
+  el.style.top=Math.random()*(window.innerHeight-100)+"px";
+  document.body.appendChild(el);insects.push(el);
+}
+
+function animateInsects(){
+  if(!gameRunning)return;
+  insects.forEach(el=>{
+    let x=parseFloat(el.style.left)||0;
+    let y=parseFloat(el.style.top)||0;
+    const dx=(Math.random()-0.5)*100;
+    const dy=(Math.random()-0.5)*80;
+    const wave=Math.sin(Date.now()/200+x)*15;
+    x=Math.min(Math.max(0,x+dx+wave),window.innerWidth-100);
+    y=Math.min(Math.max(0,y+dy),window.innerHeight-100);
+    const rotate=(Math.random()*40-20)+"deg";
+    const scale=0.9+Math.random()*0.2;
+    el.style.transform=`rotate(${rotate}) scale(${scale})`;
+    el.style.left=x+"px";el.style.top=y+"px";
+  });
+  setTimeout(animateInsects,speed);
+}
+
+function handleClick(x,y){
+  insects.forEach((el,index)=>{
+    const rect=el.getBoundingClientRect();
+    if(x>=rect.left&&x<=rect.right&&y>=rect.top&&y<=rect.bottom){
+      const now=Date.now();
+      combo=(now-lastClickTime<800)?combo+1:1;
+      lastClickTime=now;
+      score+=combo;
+      document.getElementById("score").textContent=score;
+      comboDisplay.textContent=combo>1?`Combo x${combo}`:"";
+      createSplat(x,y);
+      document.getElementById("slap").cloneNode().play();
+      el.remove();insects.splice(index,1);
+      animateClaquette();
+    }
+  });
+}
+
+window.addEventListener("click",e=>handleClick(e.clientX,e.clientY));
+window.addEventListener("touchstart",e=>handleClick(e.touches[0].clientX,e.touches[0].clientY));
+
+function createSplat(x,y){const splat=document.createElement("div");splat.className="splat";splat.style.left=x-25+"px";splat.style.top=y-25+"px";document.body.appendChild(splat);setTimeout(()=>splat.remove(),300);}
+function animateClaquette(){claquette.style.transform="rotate(-30deg) scale(0.9)";setTimeout(()=>claquette.style.transform="rotate(15deg) scale(1)",80);setTimeout(()=>claquette.style.transform="rotate(0deg) scale(1)",160);}
+
+function endGame(){
+  gameRunning=false;clearInterval(timer);clearInterval(spawnTimer);
+  mosquitoSound.pause();mosquitoSound.currentTime=0;
+  insects.forEach(el=>el.remove());insects=[];
+
+  // CORRECTION: toujours récupérer best depuis localStorage
+  best = parseInt(localStorage.getItem("bestScore")) || 0;
+  if(score > best){
+    best = score;
+    localStorage.setItem("bestScore", best);
+  }
+
+  document.getElementById("finalScore").textContent = score;
+  document.getElementById("finalBest").textContent = best;
+  hud.style.display="none";endScreen.style.display="block";
+}
+
+let hue=180;
+setInterval(()=>{hue+=0.2;document.body.style.background=`hsl(${hue},60%,90%)`;},100);
+</script>
+</body>
+</html>

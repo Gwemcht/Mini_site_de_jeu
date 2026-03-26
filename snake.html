@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Snake</title>
+
+<style>
+    body {
+        background: #000;
+        font-family: Arial, sans-serif;
+        margin: 0;
+        overflow: hidden;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        color: white;
+    }
+
+    #container {
+        text-align: center;
+        position: relative;
+    }
+
+    canvas {
+        background: #0a0a0a;
+        border: 3px solid #00ff9d;
+        box-shadow: 0 0 30px #00ff9d;
+        border-radius: 5px;
+    }
+
+    /* Screens (menu / game over) */
+    .screen {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        width: 100%;
+        opacity: 0;
+        pointer-events: none;
+        transition: 0.4s;
+    }
+    .screen.show {
+        opacity: 1;
+        pointer-events: auto;
+    }
+
+    button {
+        padding: 12px 25px;
+        font-size: 18px;
+        margin-top: 10px;
+        cursor: pointer;
+        border: none;
+        background: #00ff9d;
+        box-shadow: 0 0 12px #00ff9d;
+        transition: 0.2s;
+    }
+    button:hover {
+        transform: scale(1.1);
+    }
+
+    /* Mobile controls */
+    #controls {
+        display: none;
+        margin-top: 20px;
+    }
+    .btn {
+        width: 60px;
+        height: 60px;
+        background: #00ff9d;
+        border-radius: 15px;
+        display: inline-flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 30px;
+        margin: 5px;
+        cursor: pointer;
+    }
+
+    /* Obstacles */
+    .obstacle {
+        background: #ff0044;
+    }
+</style>
+</head>
+<body>
+
+<div id="container">
+    <canvas id="game" width="500" height="500"></canvas>
+    
+    <div id="score">Score : 0 • High score : 0</div>
+
+    <!-- MENU -->
+    <div id="menu" class="screen show">
+        <h1>🐍 SNAKE 🐍</h1>
+
+        <button onclick="startGame()">▶ JOUER</button><br>
+        <button onclick="toggleTheme()">🎨 Changer Thème</button>
+        <button onclick="toggleMode()">♾ Mode : Normal</button>
+        <button onclick="toggleObstacles()">🧱 Obstacles : OFF</button>
+        <button onclick="togglePlayers()">🎮 Joueurs : 1</button>
+    </div>
+
+    <!-- GAME OVER -->
+    <div id="gameOver" class="screen">
+        <h1>💀 GAME OVER 💀</h1>
+        <p id="finalScore"></p>
+        <button onclick="startGame()">🔄 Rejouer</button>
+        <button onclick="backToMenu()">🏠 Menu</button>
+    </div>
+
+    <!-- Mobile controls -->
+    <div id="controls">
+        <div><div class="btn" onclick="setDir(1, 'up')">⬆️</div></div>
+        <div>
+            <div class="btn" onclick="setDir(1, 'left')">⬅️</div>
+            <div class="btn" onclick="setDir(1, 'down')">⬇️</div>
+            <div class="btn" onclick="setDir(1, 'right')">➡️</div>
+        </div>
+    </div>
+</div>
+
+<!-- Sounds -->
+<audio id="sndEat" src="https://assets.mixkit.co/active_storage/sfx/2572/2572-preview.mp3"></audio>
+<audio id="sndDeath" src="https://assets.mixkit.co/active_storage/sfx/1116/1116-preview.mp3"></audio>
+<audio id="sndMove" src="https://assets.mixkit.co/active_storage/sfx/2560/2560-preview.mp3"></audio>
+<script>
+// ======================================
+// VARIABLES PRINCIPALES
+// ======================================
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const scoreBox = document.getElementById("score");
+
+let box = 20;
+let snake = [];
+let snake2 = [];
+let food;
+let dx, dy, dx2, dy2;
+let score = 0;
+let highScore = localStorage.getItem("snakeHS") || 0;
+let speed = 150;
+let loop;
+let theme = "neon";
+let infinityMode = false;
+let obstaclesEnabled = false;
+let obstacles = [];
+let players = 1;
+
+// Sons
+const sndEat = document.getElementById("sndEat");
+const sndDeath = document.getElementById("sndDeath");
+const sndMove = document.getElementById("sndMove");
+
+// ======================================
+// OUTILS
+// ======================================
+function rnd(max) {
+    return Math.floor(Math.random() * max);
+}
+
+function randomFood() {
+    return {
+        x: rnd(canvas.width / box) * box,
+        y: rnd(canvas.height / box) * box
+    };
+}
+
+function play(sound) {
+    sound.currentTime = 0;
+    sound.play();
+}
+
+// ======================================
+// OPTIONS MENU
+// ======================================
+function toggleTheme() {
+    const themes = ["neon", "gameboy"];
+    theme = theme === "neon" ? "gameboy" : "neon";
+    alert("Thème changé ➜ " + theme);
+}
+
+function toggleMode() {
+    infinityMode = !infinityMode;
+    alert("Mode : " + (infinityMode ? "Téléportation" : "Normal"));
+}
+
+function toggleObstacles() {
+    obstaclesEnabled = !obstaclesEnabled;
+    alert("Obstacles : " + (obstaclesEnabled ? "ON" : "OFF"));
+}
+
+function togglePlayers() {
+    players = players === 1 ? 2 : 1;
+    alert("Mode joueurs : " + players);
+}
+
+function backToMenu() {
+    document.getElementById("gameOver").classList.remove("show");
+    document.getElementById("menu").classList.add("show");
+}
+
+// ======================================
+// LANCER LE JEU
+// ======================================
+function startGame() {
+    document.getElementById("menu").classList.remove("show");
+    document.getElementById("gameOver").classList.remove("show");
+
+    score = 0;
+    speed = 150;
+    snake = [{ x: 10 * box, y: 10 * box }];
+    dx = box;
+    dy = 0;
+
+    if (players === 2) {
+        snake2 = [{ x: 15 * box, y: 15 * box }];
+        dx2 = -box;
+        dy2 = 0;
+    }
+
+    food = randomFood();
+    obstacles = [];
+
+    if (obstaclesEnabled) {
+        generateObstacles();
+    }
+
+    scoreBox.textContent = `Score : ${score} • High score : ${highScore}`;
+
+    clearInterval(loop);
+    loop = setInterval(update, speed);
+}
+
+// ======================================
+// OBSTACLES
+// ======================================
+function generateObstacles() {
+    obstacles = [];
+    for (let i = 0; i < 10; i++) {
+        obstacles.push({
+            x: rnd(canvas.width / box) * box,
+            y: rnd(canvas.height / box) * box
+        });
+    }
+}
+
+// ======================================
+// CONTRÔLES CLAVIER
+// ======================================
+document.addEventListener("keydown", e => {
+    // Joueur 1
+    if (e.key === "ArrowLeft" && dx !== box)  { dx = -box; dy = 0; play(sndMove); }
+    if (e.key === "ArrowUp" && dy !== box)    { dx = 0; dy = -box; play(sndMove); }
+    if (e.key === "ArrowRight" && dx !== -box){ dx = box; dy = 0; play(sndMove); }
+    if (e.key === "ArrowDown" && dy !== -box) { dx = 0; dy = box; play(sndMove); }
+
+    // Joueur 2 (ZQSD)
+    if (players === 2) {
+        if (e.key === "q" && dx2 !== box)  { dx2 = -box; dy2 = 0; play(sndMove); }
+        if (e.key === "z" && dy2 !== box)  { dx2 = 0; dy2 = -box; play(sndMove); }
+        if (e.key === "d" && dx2 !== -box) { dx2 = box; dy2 = 0; play(sndMove); }
+        if (e.key === "s" && dy2 !== -box) { dx2 = 0; dy2 = box; play(sndMove); }
+    }
+});
+
+// MOBILE
+function setDir(player, d) {
+    if (player === 1) {
+        if (d === "left" && dx !== box)  { dx = -box; dy = 0; }
+        if (d === "up" && dy !== box)    { dx = 0; dy = -box; }
+        if (d === "right" && dx !== -box){ dx = box; dy = 0; }
+        if (d === "down" && dy !== -box) { dx = 0; dy = box; }
+    }
+}
+
+// ======================================
+// DESSIN DU JEU
+// ======================================
+function drawSnake(s, color) {
+    ctx.fillStyle = color;
+    s.forEach((p, i) => {
+        ctx.fillRect(p.x, p.y, box, box);
+
+        // YEUX
+        if (i === 0) {
+            ctx.fillStyle = "white";
+            ctx.fillRect(p.x + 5, p.y + 5, 4, 4);
+            ctx.fillRect(p.x + 11, p.y + 5, 4, 4);
+        }
+        ctx.fillStyle = color;
+    });
+}
+
+function drawObstacles() {
+    ctx.fillStyle = "#ff0044";
+    obstacles.forEach(o => {
+        ctx.fillRect(o.x, o.y, box, box);
+    });
+}
+
+// ======================================
+// GAME LOOP
+// ======================================
+function update() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Dessin obstacles
+    if (obstaclesEnabled) drawObstacles();
+
+    // Nourriture
+    ctx.fillStyle = "red";
+    ctx.fillRect(food.x, food.y, box, box);
+
+    moveSnake(snake, 1);
+    if (players === 2) moveSnake(snake2, 2);
+}
+
+// ======================================
+// MOUVEMENT DU SERPENT
+// ======================================
+function moveSnake(s, id) {
+    let head = {
+        x: s[0].x + (id === 1 ? dx : dx2),
+        y: s[0].y + (id === 1 ? dy : dy2)
+    };
+
+    // Mode Infinity : téléportation
+    if (infinityMode) {
+        if (head.x < 0) head.x = canvas.width - box;
+        if (head.x >= canvas.width) head.x = 0;
+        if (head.y < 0) head.y = canvas.height - box;
+        if (head.y >= canvas.height) head.y = 0;
+    } 
+    else {
+        if (head.x < 0 || head.x >= canvas.width || head.y < 0 || head.y >= canvas.height) {
+            return endGame();
+        }
+    }
+
+    // Collision serpent sur lui-même
+    for (let part of s) {
+        if (head.x === part.x && head.y === part.y) {
+            return endGame();
+        }
+    }
+
+    // Collision obstacles
+    if (obstaclesEnabled) {
+        for (let o of obstacles) {
+            if (head.x === o.x && head.y === o.y) return endGame();
+        }
+    }
+
+    // Choc entre serpents
+    if (players === 2) {
+        let other = id === 1 ? snake2 : snake;
+        for (let p of other) {
+            if (head.x === p.x && head.y === p.y) {
+                return endGame();
+            }
+        }
+    }
+
+    // Manger
+    if (head.x === food.x && head.y === food.y) {
+        score++;
+        play(sndEat);
+
+        scoreBox.textContent = `Score : ${score} • High score : ${highScore}`;
+        food = randomFood();
+
+        if (score > highScore) {
+            highScore = score;
+            localStorage.setItem("snakeHS", highScore);
+        }
+
+        // Légère accélération
+        if (speed > 60) {
+            speed -= 3;
+            clearInterval(loop);
+            loop = setInterval(update, speed);
+        }
+    } else {
+        s.pop();
+    }
+
+    s.unshift(head);
+
+    // Dessin
+    const color = id === 1 ? "#00ff9d" : "#00aaff";
+    drawSnake(s, color);
+}
+
+// ======================================
+// FIN DE PARTIE
+// ======================================
+function endGame() {
+    clearInterval(loop);
+    play(sndDeath);
+
+    document.getElementById("finalScore").textContent =
+        "Score final : " + score;
+
+    document.getElementById("gameOver").classList.add("show");
+}
+</script>
+<script>
+// ======================================
+// THÈMES VISUELS
+// ======================================
+function applyTheme() {
+    if (theme === "neon") {
+        canvas.style.borderColor = "#00ff9d";
+        canvas.style.boxShadow = "0 0 30px #00ff9d";
+        document.body.style.background = "#000";
+    }
+    else if (theme === "gameboy") {
+        canvas.style.borderColor = "#8bc34a";
+        canvas.style.boxShadow = "0 0 10px #8bc34a";
+        document.body.style.background = "#234d20";
+    }
+}
+
+// Appliquer au démarrage
+applyTheme();
+
+// ======================================
+// PARTICULES
+// ======================================
+let particles = [];
+
+function spawnParticles(x, y) {
+    for (let i = 0; i < 10; i++) {
+        particles.push({
+            x: x,
+            y: y,
+            dx: (Math.random() - 0.5) * 4,
+            dy: (Math.random() - 0.5) * 4,
+            life: 20
+        });
+    }
+}
+
+function drawParticles() {
+    particles.forEach(p => {
+        ctx.fillStyle = "rgba(255, 0, 50, " + (p.life / 20) + ")";
+        ctx.fillRect(p.x, p.y, 4, 4);
+        p.x += p.dx;
+        p.y += p.dy;
+        p.life--;
+    });
+    particles = particles.filter(p => p.life > 0);
+}
+
+// Modification : Particules quand on mange
+const oldMoveSnake = moveSnake;
+moveSnake = function (s, id) {
+    let prevScore = score;
+    oldMoveSnake(s, id);
+    if (score > prevScore) {
+        spawnParticles(food.x, food.y);
+    }
+};
+
+// Intégration des particules dans la boucle
+const oldUpdate = update;
+update = function () {
+    oldUpdate();
+    drawParticles();
+};
+
+// ======================================
+// JOYSTICK MOBILE (si écran petit)
+// ======================================
+if (window.innerWidth < 700) {
+    document.getElementById("controls").style.display = "block";
+    box = 25;
+}
+
+// ======================================
+// MODE FULLSCREEN (option)
+// ======================================
+function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();
+    } else {
+        document.exitFullscreen();
+    }
+}
+</script>
+
+</body>
+</html>
+<script>
+// ======================================
+// AUTO FIX / FINAL CLEANUP
+// ======================================
+
+// Vérifie que le thème est appliqué
+document.addEventListener("DOMContentLoaded", applyTheme);
+
+// Empêche le scroll sur mobile
+window.addEventListener("touchmove", e => {
+    e.preventDefault();
+}, { passive: false });
+
+// Message console
+console.log("%cSnake Ultimate chargé avec succès 🐍🔥",
+    "color:#00ff9d; font-size:16px; font-weight:bold;");
+</script>
+
+</html>

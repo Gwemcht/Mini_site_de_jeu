@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Jeu de Puzzle</title>
+
+<style>
+:root {
+    --accent: #00ff88;
+    --bg: #121212;
+    --panel: #1f1f1f;
+}
+
+body {
+    margin: 0;
+    height: 100vh;
+    background: linear-gradient(135deg, #0f0f0f, #222);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: "Segoe UI", sans-serif;
+    color: white;
+}
+
+#app {
+    background: var(--panel);
+    padding: 16px;
+    border-radius: 14px;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.7);
+}
+
+#controls {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+input, select, button {
+    background: #111;
+    border: none;
+    color: white;
+    padding: 8px 10px;
+    border-radius: 8px;
+}
+
+button {
+    background: var(--accent);
+    color: black;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+button:hover {
+    filter: brightness(1.1);
+}
+
+#board {
+    position: relative;
+    width: 420px;
+    height: 420px;
+    background: #000;
+    border-radius: 12px;
+    box-shadow: inset 0 0 0 3px var(--accent);
+    overflow: hidden;
+}
+
+canvas {
+    position: absolute;
+    cursor: grab;
+    transition: box-shadow 0.2s;
+}
+
+canvas:hover {
+    box-shadow: 0 0 12px rgba(0,255,136,0.6);
+}
+
+canvas.locked {
+    cursor: default;
+    box-shadow: none;
+}
+
+#message {
+    margin-top: 10px;
+    text-align: center;
+    font-weight: bold;
+    color: var(--accent);
+    opacity: 0;
+    transition: opacity 0.4s;
+}
+
+#message.show {
+    opacity: 1;
+}
+</style>
+</head>
+
+<body>
+
+<div id="app">
+    <div id="controls">
+        <input type="file" id="imageInput" accept="image/*">
+        <select id="difficulty">
+            <option value="3">Facile</option>
+            <option value="4">Moyen</option>
+            <option value="6">Difficile</option>
+        </select>
+        <button onclick="start()">Jouer</button>
+    </div>
+
+    <div id="board"></div>
+    <div id="message"></div>
+</div>
+
+<script>
+const SNAP_DISTANCE = 20;
+let size, img, pieceSize;
+let pieces = [];
+let zCounter = 1;
+
+const board = document.getElementById("board");
+const message = document.getElementById("message");
+
+class Piece {
+    constructor(row, col) {
+        this.row = row;
+        this.col = col;
+
+        this.correctX = col * pieceSize;
+        this.correctY = row * pieceSize;
+
+        this.x = Math.random() * (board.clientWidth - pieceSize);
+        this.y = Math.random() * (board.clientHeight - pieceSize);
+
+        this.locked = false;
+
+        this.canvas = document.createElement("canvas");
+        this.canvas.width = pieceSize;
+        this.canvas.height = pieceSize;
+
+        this.ctx = this.canvas.getContext("2d");
+        this.draw();
+        this.update();
+        this.enableDrag();
+
+        board.appendChild(this.canvas);
+    }
+
+    draw() {
+        this.ctx.drawImage(
+            img,
+            this.col * img.width / size,
+            this.row * img.height / size,
+            img.width / size,
+            img.height / size,
+            0, 0, pieceSize, pieceSize
+        );
+    }
+
+    enableDrag() {
+        let ox, oy;
+
+        this.canvas.onmousedown = e => {
+            if (this.locked) return;
+
+            ox = e.offsetX;
+            oy = e.offsetY;
+
+            // Toujours au-dessus des autres
+            this.canvas.style.zIndex = ++zCounter;
+
+            document.onmousemove = ev => {
+                this.x = ev.clientX - board.offsetLeft - ox;
+                this.y = ev.clientY - board.offsetTop - oy;
+
+                // Limite dans le carré
+                this.x = Math.max(0, Math.min(this.x, board.clientWidth - pieceSize));
+                this.y = Math.max(0, Math.min(this.y, board.clientHeight - pieceSize));
+
+                this.update();
+            };
+
+            document.onmouseup = () => {
+                this.snap();
+                document.onmousemove = null;
+            };
+        };
+    }
+
+    update() {
+        this.canvas.style.left = this.x + "px";
+        this.canvas.style.top = this.y + "px";
+    }
+
+    snap() {
+        if (Math.hypot(this.x - this.correctX, this.y - this.correctY) < SNAP_DISTANCE) {
+            this.x = this.correctX;
+            this.y = this.correctY;
+            this.locked = true;
+            this.canvas.classList.add("locked");
+            this.update();
+            showMessage("✔ Pièce bien placée");
+            checkWin();
+        }
+    }
+}
+
+function start() {
+    board.innerHTML = "";
+    pieces = [];
+    message.classList.remove("show");
+    zCounter = 1;
+
+    size = parseInt(difficulty.value);
+    pieceSize = board.clientWidth / size;
+
+    const file = imageInput.files[0];
+    if (!file) return showMessage("📷 Choisis une image");
+
+    img = new Image();
+    img.src = URL.createObjectURL(file);
+    img.onload = createPuzzle;
+}
+
+function createPuzzle() {
+    showMessage("🧩 Reconstitue l’image");
+    for (let r = 0; r < size; r++) {
+        for (let c = 0; c < size; c++) {
+            pieces.push(new Piece(r, c));
+        }
+    }
+}
+
+function checkWin() {
+    if (pieces.every(p => p.locked)) {
+        showMessage("🎉 Bravo ! Puzzle terminé !");
+    }
+}
+
+function showMessage(text) {
+    message.textContent = text;
+    message.classList.add("show");
+    setTimeout(() => message.classList.remove("show"), 2000);
+}
+</script>
+
+</body>
+</html>

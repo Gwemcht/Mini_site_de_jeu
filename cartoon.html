@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Jeu Cartoon</title>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&display=swap');
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+  font-family: 'Orbitron', sans-serif;
+  background: radial-gradient(circle at top, #1a2a6c, #16213e 40%, #0f0f1a 100%);
+}
+
+canvas {
+  display: block;
+  background: transparent;
+}
+
+/* ECRANS */
+#startScreen, #gameOverScreen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  backdrop-filter: blur(12px);
+  background: rgba(0, 0, 0, 0.65);
+  color: white;
+  z-index: 10;
+}
+
+#startScreen div,
+#gameOverText {
+  font-size: 48px;
+  letter-spacing: 4px;
+  margin-bottom: 25px;
+  text-transform: uppercase;
+  text-align: center;
+  text-shadow:
+    0 0 10px #00ffff,
+    0 0 20px #00ffff,
+    0 0 40px #00ffff;
+}
+
+button {
+  padding: 15px 50px;
+  font-size: 22px;
+  cursor: pointer;
+  border: none;
+  border-radius: 50px;
+  background: linear-gradient(45deg, #ff00cc, #3333ff);
+  color: white;
+  font-weight: bold;
+  letter-spacing: 2px;
+  box-shadow:
+    0 0 10px #ff00cc,
+    0 0 30px #3333ff;
+  transition: 0.3s ease;
+}
+
+button:hover {
+  transform: scale(1.1);
+}
+
+#powerUpInfo {
+  position: absolute;
+  top: 70px;
+  left: 20px;
+  font-size: 20px;
+  color: #00ffff;
+  text-shadow: 0 0 10px #00ffff;
+}
+</style>
+</head>
+
+<body>
+
+<div id="startScreen">
+  <div>Jeu Cartoon</div>
+  <button id="playBtn">Jouer</button>
+</div>
+
+<div id="gameOverScreen" style="display:none;">
+  <div id="gameOverText"></div>
+  <button id="restartBtn">Rejouer</button>
+</div>
+
+<div id="powerUpInfo"></div>
+<canvas id="gameCanvas"></canvas>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+const startScreen = document.getElementById("startScreen");
+const playBtn = document.getElementById("playBtn");
+const gameOverScreen = document.getElementById("gameOverScreen");
+const gameOverText = document.getElementById("gameOverText");
+const restartBtn = document.getElementById("restartBtn");
+const powerUpInfo = document.getElementById("powerUpInfo");
+
+let gameStarted = false;
+let score = 0;
+let frame = 0;
+let enemies = [];
+let powerUps = [];
+let player = { x: 50, y: 180, w: 50, h: 50, floatAngle: 0 };
+
+let activePowerUp = null;
+let powerUpTimer = 0;
+let enemySpeedModifier = 1;
+let scoreMultiplier = 1;
+
+const playerImage = new Image();
+playerImage.src = "images et musiques/avion.png";
+playerImage.onload = () => startScreen.style.display = "flex";
+
+const enemyImage = new Image();
+enemyImage.src = "images et musiques/boulet.png";
+
+const powerUpImage = new Image();
+powerUpImage.src = "images et musiques/fiole.png";
+
+/* PLEIN ÉCRAN */
+function adjustCanvasSize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+
+  const scale = canvas.width / 800;
+  player.w = 50 * scale;
+  player.h = 50 * scale;
+}
+
+window.addEventListener("resize", adjustCanvasSize);
+adjustCanvasSize();
+
+canvas.addEventListener("mousemove", e => {
+  if (!gameStarted) return;
+  const rect = canvas.getBoundingClientRect();
+  player.y = Math.min(canvas.height - player.h,
+    Math.max(0, e.clientY - rect.top - player.h / 2));
+});
+
+playBtn.addEventListener("click", startGame);
+restartBtn.addEventListener("click", startGame);
+
+function startGame() {
+  startScreen.style.display = "none";
+  gameOverScreen.style.display = "none";
+  powerUpInfo.innerHTML = "";
+  gameStarted = true;
+  score = 0;
+  frame = 0;
+  enemies = [];
+  powerUps = [];
+  player.y = canvas.height / 2 - player.h / 2;
+  activePowerUp = null;
+  enemySpeedModifier = 1;
+  scoreMultiplier = 1;
+  requestAnimationFrame(update);
+}
+
+function createEnemy() {
+  const size = Math.random() * 40 + 30;
+  const y = Math.random() * (canvas.height - size);
+  const vy = (Math.random() * 2 + 1) * (Math.random() < 0.5 ? -1 : 1);
+  enemies.push({ x: canvas.width, y, w: size, h: size, vy });
+}
+
+function createPowerUp() {
+  const type = Math.random() < 0.6
+    ? "bonus"
+    : ["invincible", "slow", "x2"][Math.floor(Math.random() * 3)];
+
+  const size = 30;
+  const y = Math.random() * (canvas.height - size);
+
+  const message =
+    type === "invincible" ? "Invincible !" :
+    type === "slow" ? "Ralentit ennemis !" :
+    type === "x2" ? "Score x2 !" :
+    "Bonus +5";
+
+  powerUps.push({
+    x: canvas.width,
+    y,
+    w: size,
+    h: size,
+    type,
+    message
+  });
+}
+
+function activatePowerUp(type) {
+  activePowerUp = type;
+  powerUpTimer = 300;
+
+  if (type === "invincible") powerUpInfo.innerHTML = "Invincible !";
+  if (type === "slow") {
+    enemySpeedModifier = 0.5;
+    powerUpInfo.innerHTML = "Ennemis ralentis !";
+  }
+  if (type === "x2") {
+    scoreMultiplier = 2;
+    powerUpInfo.innerHTML = "Score x2 !";
+  }
+}
+
+function updatePowerUp() {
+  if (!activePowerUp) return;
+
+  powerUpTimer--;
+  if (powerUpTimer <= 0) {
+    enemySpeedModifier = 1;
+    scoreMultiplier = 1;
+    activePowerUp = null;
+    powerUpInfo.innerHTML = "";
+  }
+}
+
+function collide(a, b) {
+  return !(a.x + a.w < b.x || a.x > b.x + b.w ||
+           a.y + a.h < b.y || a.y > b.y + b.h);
+}
+
+function drawBackground() {
+  let gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+  gradient.addColorStop(0, "#87CEEB");
+  gradient.addColorStop(0.7, "#A0D995");
+  gradient.addColorStop(1, "#5CA65C");
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+function drawPlayer() {
+  player.floatAngle += 0.05;
+  const floatDy = Math.sin(player.floatAngle) * 3;
+  ctx.drawImage(playerImage, player.x, player.y + floatDy, player.w, player.h);
+}
+
+function drawEnemies() {
+  enemies.forEach(e => {
+    const speed = enemySpeedModifier * 3;
+    e.x -= speed;
+    e.y += e.vy;
+    if (e.y < 0 || e.y + e.h > canvas.height) e.vy *= -1;
+    ctx.drawImage(enemyImage, e.x, e.y, e.w, e.h);
+    if (e.x + e.w < 0) score += scoreMultiplier;
+  });
+  enemies = enemies.filter(e => e.x + e.w > 0);
+}
+
+function drawPowerUps() {
+  for (let i = powerUps.length - 1; i >= 0; i--) {
+    let p = powerUps[i];
+
+    const floatOffset = Math.sin(frame / 20) * 3;
+    ctx.drawImage(powerUpImage, p.x, p.y + floatOffset, p.w, p.h);
+
+    ctx.fillStyle = "#00ffff";
+    ctx.font = "16px Orbitron";
+    ctx.textAlign = "center";
+    ctx.fillText(p.message, p.x + p.w / 2, p.y - 10);
+
+    p.x -= 2;
+
+    if (collide(player, p)) {
+      if (p.type === "bonus") score += 5;
+      else activatePowerUp(p.type);
+      powerUps.splice(i, 1);
+      continue;
+    }
+
+    if (p.x + p.w < 0) powerUps.splice(i, 1);
+  }
+}
+
+function update() {
+  if (!gameStarted) return;
+
+  drawBackground();
+  drawPlayer();
+  drawEnemies();
+  drawPowerUps();
+  updatePowerUp();
+
+  if (frame % 100 === 0) createEnemy();
+  if (frame % 900 === 0) createPowerUp();
+
+  for (let e of enemies) {
+    if (collide(player, e) && activePowerUp !== "invincible") {
+      gameOver();
+      return;
+    }
+  }
+
+  ctx.fillStyle = "white";
+  ctx.font = "22px Orbitron";
+  ctx.textAlign = "left";
+  ctx.fillText("Score: " + score, 10, 30);
+
+  frame++;
+  requestAnimationFrame(update);
+}
+
+function gameOver() {
+  gameStarted = false;
+  gameOverText.innerHTML = `GAME OVER<br>Score: ${score}`;
+  gameOverScreen.style.display = "flex";
+}
+</script>
+
+</body>
+</html>

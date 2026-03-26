@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>🚀 Super Tank Deluxe 🚀</title>
+
+<style>
+body{
+  margin:0;
+  background:black;
+  overflow:hidden;
+  font-family:Arial;
+  color:white;
+  text-align:center;
+}
+h1{margin:10px;}
+
+#hud{
+  margin:5px;
+  font-size:20px;
+  display:none;
+  background:rgba(0,0,0,0.7);
+  padding:5px 10px;
+  border-radius:8px;
+}
+
+#game{
+  width:600px;
+  height:400px;
+  margin:auto;
+  border:3px solid #5aa55a;
+  position:relative;
+  overflow:hidden;
+  display:none;
+  background:black;
+  outline:none; /* suppression du focus bleu */
+}
+
+.star{
+  position:absolute;
+  width:2px;
+  height:2px;
+  background:white;
+  border-radius:50%;
+}
+
+.tank{
+  width:50px;
+  height:50px;
+  position:absolute;
+  transform-origin:center center;
+}
+.tank img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  pointer-events:none;
+}
+
+.enemy{
+  width:50px;
+  height:50px;
+  position:absolute;
+}
+.enemy img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  pointer-events:none;
+}
+
+.bullet,.enemyBullet{
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  position:absolute;
+}
+.bullet{background:cyan;box-shadow:0 0 6px cyan;}
+.enemyBullet{background:magenta;box-shadow:0 0 6px magenta;}
+
+.obstacle{
+  width:50px;
+  height:50px;
+  position:absolute;
+  background:linear-gradient(145deg,#5a3921,#8b5a2b);
+  border-radius:6px;
+}
+
+.powerup{
+  width:20px;
+  height:20px;
+  position:absolute;
+  border-radius:50%;
+  background:gold;
+  border:2px solid white;
+}
+
+#startScreen,#endScreen{
+  position:absolute;
+  top:0;left:0;
+  width:100%;height:100%;
+  background:rgba(0,0,0,0.95);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  z-index:10;
+}
+
+button{
+  padding:10px 25px;
+  font-size:18px;
+  margin-top:20px;
+  cursor:pointer;
+}
+
+/* Désactivation focus bleu pour tous les éléments */
+:focus { outline:none; }
+</style>
+</head>
+
+<body>
+<h1>🚀 Super Tank Deluxe 🚀</h1>
+
+<div id="hud">
+  <span id="score">Score : 0</span> |
+  <span id="lives">Vies : ❤️❤️❤️</span> |
+  <span id="level">Niveau : 1</span> <!-- Affichage du niveau -->
+</div>
+
+<div id="game" tabindex="0"></div>
+
+<div id="startScreen">
+  <h2>Bienvenue</h2>
+  <p>⬅️➡️⬆️⬇️ Bouger | Clic tirer</p>
+  <button id="startBtn">Jouer</button>
+</div>
+
+<div id="endScreen" style="display:none;">
+  <h2 id="endMsg"></h2>
+  <button onclick="location.reload()">Rejouer</button>
+  <button id="playOhNoBtn" style="display:none;">🔊 Jouer le son</button>
+</div>
+
+<!-- Sons / Musiques -->
+<audio id="shootSound" src="images et musiques/_fr_sound_tir-laser-1_ - Copie.mp3"></audio>
+<audio id="boomSound" src="https://voicebot.su/fr/sound/la-bombe-explose-avec-des-eclats-qui-senvolent/.mp3"></audio>
+<audio id="bgMusic" src="http://soundimage.org/wp-content/uploads/2014/10/Light-Years_v001.mp3" loop></audio>
+<audio id="ohNoSound" src="https://www.soundboardly.com/wp-content/uploads/2023/09/Oh-No-Oh-No-Oh-No-no-no-no.mp3" preload="auto"></audio>
+
+<script>
+const game = document.getElementById("game");
+const player = document.createElement("div");
+player.id="player";
+player.className="tank";
+player.style.left="275px";
+player.style.top="350px";
+const playerImg=document.createElement("img");
+playerImg.src="images et musiques/joueur tank.png";
+playerImg.alt="Tank";
+player.appendChild(playerImg);
+game.appendChild(player);
+
+const hud = document.getElementById("hud");
+const startScreen = document.getElementById("startScreen");
+const endScreen = document.getElementById("endScreen");
+const endMsg = document.getElementById("endMsg");
+const playOhNoBtn = document.getElementById("playOhNoBtn");
+const scoreEl = document.getElementById("score");
+const livesEl = document.getElementById("lives");
+const levelEl = document.getElementById("level"); // Nouveau : élément niveau
+
+const shootSound = document.getElementById("shootSound");
+const boomSound = document.getElementById("boomSound");
+const bgMusic = document.getElementById("bgMusic");
+const ohNoSound = document.getElementById("ohNoSound");
+
+let keys = {}, bullets=[], enemyBullets=[], enemies=[], obstacles=[], stars=[];
+let score=0, lives=3, gameLoop, gameOver=false;
+let mouseX=300, mouseY=200;
+let starCount = 80;
+let level = 1; // Niveau initial
+
+/* Souris */
+document.addEventListener("keydown", e=>keys[e.key]=true);
+document.addEventListener("keyup", e=>keys[e.key]=false);
+game.addEventListener("mousemove", e=>{
+  const r = game.getBoundingClientRect();
+  mouseX = e.clientX - r.left;
+  mouseY = e.clientY - r.top;
+});
+
+/* Créer étoiles fond */
+function createStars(){
+  stars=[];
+  for(let i=0;i<starCount;i++){
+    let s=document.createElement("div");
+    s.className="star";
+    s.style.left=Math.random()*600+"px";
+    s.style.top=Math.random()*400+"px";
+    s.dataset.speed = (Math.random()*1+0.2);
+    game.appendChild(s);
+    stars.push(s);
+  }
+}
+
+/* Collisions */
+function rect(el){return {x:parseInt(el.style.left),y:parseInt(el.style.top),w:el.offsetWidth,h:el.offsetHeight};}
+function coll(a,b){return a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y;}
+
+/* Init obstacles et ennemis selon niveau */
+function initLevel(){
+  bullets.forEach(b=>b.remove()); bullets=[];
+  enemyBullets.forEach(b=>b.remove()); enemyBullets=[];
+  enemies.forEach(e=>e.remove()); enemies=[];
+  obstacles.forEach(o=>o.remove()); obstacles=[];
+
+  // Met à jour l'affichage du niveau
+  levelEl.textContent = "Niveau : " + level;
+
+  // Objets
+  let nObs = Math.min(4+level-1,8);
+  for(let i=0;i<nObs;i++){
+    let o=document.createElement("div"); o.className="obstacle";
+    o.style.left=Math.floor(Math.random()*11)*50+"px";
+    o.style.top=Math.floor(Math.random()*7)*50+"px";
+    game.appendChild(o); obstacles.push(o);
+  }
+
+  // Ennemis
+  let nE = 3 + Math.floor(level/2);
+  for(let i=0;i<nE;i++){
+    let e=document.createElement("div"); e.className="enemy";
+    e.style.left=Math.floor(Math.random()*11)*50+"px";
+    e.style.top=Math.floor(Math.random()*3)*50+"px";
+
+    const img=document.createElement("img");
+    img.src="images et musiques/ennemi tank.png"; img.alt="Enemy";
+    e.appendChild(img);
+
+    game.appendChild(e); enemies.push(e);
+  }
+
+  player.style.left="275px"; player.style.top="350px";
+}
+
+/* Tir joueur */
+game.addEventListener("click", shoot);
+function shoot(){
+  if(gameOver) return;
+  const b = document.createElement("div"); b.className="bullet";
+  const x=parseInt(player.style.left)+25;
+  const y=parseInt(player.style.top)+25;
+  let dx = mouseX-x; let dy = mouseY-y; let dist=Math.hypot(dx,dy);
+  if(dist<1) dist=1;
+  b.dataset.vx = dx/dist*10; b.dataset.vy=dy/dist*10;
+  b.style.left=x+"px"; b.style.top=y+"px";
+  game.appendChild(b); bullets.push(b);
+  shootSound.currentTime=0; shootSound.play().catch(()=>{});
+}
+
+/* Tir ennemi */
+function enemyShoot(e){
+  const b = document.createElement("div"); b.className="enemyBullet";
+  const ex=parseInt(e.style.left)+25;
+  const ey=parseInt(e.style.top)+25;
+  const px=parseInt(player.style.left)+25;
+  const py=parseInt(player.style.top)+25;
+  let dx=px-ex; let dy=py-ey; let dist=Math.hypot(dx,dy);
+  if(dist<1) dist=1;
+  b.dataset.vx = dx/dist*(2+level*0.4);
+  b.dataset.vy = dy/dist*(2+level*0.4);
+  b.style.left=ex+"px"; b.style.top=ey+"px";
+  game.appendChild(b); enemyBullets.push(b);
+}
+
+/* Boucle jeu */
+function loop(){
+  if(gameOver) return;
+
+  // Déplacement joueur
+  let l=parseInt(player.style.left), t=parseInt(player.style.top);
+  let oldL=l, oldT=t;
+  if(keys.ArrowLeft) l=Math.max(0,l-50/10);
+  if(keys.ArrowRight) l=Math.min(600-50,l+50/10);
+  if(keys.ArrowUp) t=Math.max(0,t-50/10);
+  if(keys.ArrowDown) t=Math.min(400-50,t+50/10);
+
+  for(let o of obstacles){if(coll({x:l,y:t,w:50,h:50},rect(o))){l=oldL;t=oldT;break;}}
+  player.style.left=l+"px"; player.style.top=t+"px";
+  const angle=Math.atan2(mouseY-(t+25),mouseX-(l+25))*180/Math.PI;
+  player.style.transform="rotate("+angle+"deg)";
+
+  // Balles joueur
+  bullets.forEach((b,i)=>{
+    b.style.left=parseFloat(b.style.left)+parseFloat(b.dataset.vx)+"px";
+    b.style.top=parseFloat(b.style.top)+parseFloat(b.dataset.vy)+"px";
+
+    enemies.forEach((e,j)=>{
+      if(coll(rect(b),rect(e))){
+        e.remove(); enemies.splice(j,1);
+        b.remove(); bullets.splice(i,1);
+        score++; scoreEl.textContent="Score : "+score;
+        boomSound.currentTime=0; boomSound.play().catch(()=>{});
+      }
+    });
+
+    if(parseFloat(b.style.left)<0||parseFloat(b.style.left)>600||parseFloat(b.style.top)<0||parseFloat(b.style.top)>400){
+      b.remove(); bullets.splice(i,1);
+    }
+  });
+
+  // Balles ennemis
+  enemyBullets.forEach((b,i)=>{
+    b.style.left=parseFloat(b.style.left)+parseFloat(b.dataset.vx)+"px";
+    b.style.top=parseFloat(b.style.top)+parseFloat(b.dataset.vy)+"px";
+
+    // Vérifie si la balle ennemie touche un obstacle
+    let bulletRect = rect(b);
+    for (let o of obstacles) {
+      if (coll(bulletRect, rect(o))) {
+        b.remove(); 
+        enemyBullets.splice(i, 1);
+        break; // Arrêter dès qu'une collision est trouvée
+      }
+    }
+
+    if(coll(rect(b),rect(player))){
+      b.remove(); enemyBullets.splice(i,1); lives--; livesEl.textContent="Vies : "+'❤️'.repeat(lives); 
+      if(lives<=0) endGame(false);
+    }
+    if(parseFloat(b.style.left)<0||parseFloat(b.style.left)>600||parseFloat(b.style.top)<0||parseFloat(b.style.top)>400){
+      b.remove(); enemyBullets.splice(i,1);
+    }
+  });
+
+  // Tir aléatoire ennemis
+  enemies.forEach(e=>{if(Math.random()<0.01+level*0.001) enemyShoot(e);});
+
+  // Nouvelles vagues
+  if(enemies.length===0 && !gameOver){
+    level++;
+    initLevel();
+  }
+
+  // Déplacement étoiles
+  stars.forEach(s=>{
+    let y=parseFloat(s.style.top)+parseFloat(s.dataset.speed);
+    if(y>400) y=0; s.style.top=y+"px";
+  });
+}
+
+/* Start */
+document.getElementById("startBtn").onclick=()=>{
+  startScreen.style.display="none"; game.style.display="block"; hud.style.display="block";
+  level=1; score=0; lives=3;
+  scoreEl.textContent="Score : "+score;
+  livesEl.textContent="Vies : "+'❤️'.repeat(lives);
+  levelEl.textContent="Niveau : " + level; // Initialisation du niveau
+
+  createStars();
+  initLevel();
+
+  bgMusic.currentTime=0; bgMusic.volume=0.3; bgMusic.play().catch(()=>{});
+  ohNoSound.play().then(()=>{ohNoSound.pause();ohNoSound.currentTime=0;}).catch(()=>{});
+
+  clearInterval(gameLoop); gameLoop=setInterval(loop,50);
+};
+
+/* Fin */
+function endGame(victoire){
+  gameOver=true; endScreen.style.display="flex";
+  endMsg.textContent=victoire ? "T'es le big boss !​🏆​ Score : "+score : "T'es une grosse merde !💩​ Score : "+score;
+  try{bgMusic.pause();}catch(e){}
+  if(!victoire){ ohNoSound.currentTime=0; ohNoSound.play().catch(()=>{playOhNoBtn.style.display="inline-block";}); }
+}
+playOhNoBtn.onclick=()=>{ ohNoSound.currentTime=0; ohNoSound.play().catch(()=>{});}
+</script>
+</body>
+</html>

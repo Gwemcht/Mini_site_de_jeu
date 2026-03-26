@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Machine à Sous</title>
+
+<style>
+body {
+    background: radial-gradient(circle, #111 0%, #000 100%);
+    color: white;
+    text-align: center;
+    font-family: "Trebuchet MS", sans-serif;
+    padding-top: 20px;
+}
+
+h1 {
+    color: gold;
+    text-shadow: 0 0 15px gold;
+    font-size: 40px;
+}
+
+/* MACHINE */
+.machine {
+    width: 450px;
+    margin: auto;
+    padding: 25px;
+    background: #1a1a1a;
+    border: 6px solid #e9c100;
+    border-radius: 25px;
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 0 25px gold, inset 0 0 20px #000;
+    overflow: hidden; /* 👈 LED coupées proprement */
+}
+
+/* LED RING (DERRIÈRE ET CONTENU) */
+.led-ring {
+    position: absolute;
+    inset: 0;           /* 👈 même taille que la machine */
+    border-radius: 25px;
+    padding: 6px;
+    background: conic-gradient(
+        gold, red, gold, blue, gold, green, gold
+    );
+    animation: spinLED 8s linear infinite;
+    pointer-events: none;
+    z-index: -1;        /* 👈 derrière */
+}
+
+@keyframes spinLED {
+    to { transform: rotate(360deg); }
+}
+
+/* SLOTS */
+.slots {
+    display: flex;
+    justify-content: space-around;
+    margin: 20px 0;
+    height: 95px;
+}
+
+.slot {
+    width: 90px;
+    height: 90px;
+    background: black;
+    border: 4px solid gold;
+    border-radius: 12px;
+    font-size: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: inset 0 0 10px #000;
+}
+
+.shake {
+    animation: shake 0.25s;
+}
+@keyframes shake {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    50% { transform: translateX(4px); }
+    75% { transform: translateX(-3px); }
+    100% { transform: translateX(0); }
+}
+
+/* LEVIER */
+.lever-container {
+    position: absolute;
+    right: 10px;
+    top: 30px;
+    width: 70px;
+    height: 200px;
+}
+
+.lever-stick {
+    width: 14px;
+    height: 130px;
+    background: linear-gradient(#ccc, #888);
+    border-radius: 7px;
+    margin: auto;
+    transform-origin: top;
+    transition: transform .15s;
+}
+
+.lever-ball {
+    width: 45px;
+    height: 45px;
+    background: radial-gradient(circle, #ff3b3b, #8b0000);
+    border-radius: 50%;
+    margin: auto;
+    margin-top: 10px;
+    cursor: pointer;
+    box-shadow: 0 0 15px red;
+}
+
+.lever-pull { transform: rotate(30deg); }
+
+/* PANELS */
+.panel {
+    margin-top: 10px;
+    font-size: 22px;
+}
+
+input {
+    width: 90px;
+    padding: 5px;
+    border-radius: 5px;
+    border: none;
+    text-align: center;
+    font-size: 20px;
+}
+
+#result {
+    font-size: 26px;
+    margin-top: 12px;
+    min-height: 35px;
+    font-weight: bold;
+}
+
+/* PARTICULES */
+.particle-container {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.particle {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background: gold;
+    border-radius: 50%;
+    box-shadow: 0 0 10px gold;
+    animation: fly 1s linear forwards;
+}
+
+@keyframes fly {
+    to {
+        transform: translate(var(--x), var(--y));
+        opacity: 0;
+    }
+}
+
+/* GAME OVER */
+#gameOverOverlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    color: red;
+    font-size: 60px;
+    font-weight: bold;
+    text-shadow: 0 0 20px red;
+    z-index: 9999;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+#gameOverOverlay button {
+    margin-top: 30px;
+    font-size: 30px;
+    padding: 15px 40px;
+    background: gold;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: bold;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🎰 MACHINE À SOUS</h1>
+
+<div class="machine">
+    <div class="led-ring"></div>
+    <div class="particle-container" id="particles"></div>
+
+    <div class="lever-container">
+        <div id="leverStick" class="lever-stick"></div>
+        <div id="leverBall" class="lever-ball" onclick="pullLever()"></div>
+    </div>
+
+    <div class="panel">Crédits : <span id="credits">0</span> 💰</div>
+    <div class="panel">Mise : <input type="number" id="mise" value="10" min="1"></div>
+
+    <div class="slots">
+        <div class="slot" id="slot1">🍒</div>
+        <div class="slot" id="slot2">🍋</div>
+        <div class="slot" id="slot3">⭐</div>
+    </div>
+
+    <div id="result"></div>
+</div>
+
+<div id="gameOverOverlay">
+    💀 GAME OVER 💀
+    <button onclick="restartGame()">REJOUER</button>
+</div>
+
+<script>
+const symbols = ["🍒","🍋","⭐","🔔","🍇","💎"];
+
+let credits = parseInt(localStorage.getItem("credits"));
+if (isNaN(credits) || credits <= 0) credits = 200;
+
+const creditsEl = document.getElementById("credits");
+creditsEl.textContent = credits;
+
+function save() {
+    localStorage.setItem("credits", credits);
+}
+
+function animate(slot) {
+    let i = 0;
+    const anim = setInterval(() => {
+        slot.textContent = symbols[Math.floor(Math.random()*symbols.length)];
+        if (++i > 18) clearInterval(anim);
+    }, 50);
+}
+
+function pullLever() {
+    const stick = document.getElementById("leverStick");
+    stick.classList.add("lever-pull");
+    setTimeout(() => stick.classList.remove("lever-pull"), 250);
+    spin();
+}
+
+function jackpotExplosion() {
+    const c = document.getElementById("particles");
+    for (let i = 0; i < 40; i++) {
+        const p = document.createElement("div");
+        p.className = "particle";
+        p.style.left = "50%";
+        p.style.top = "50%";
+        p.style.setProperty("--x", (Math.random()*400-200)+"px");
+        p.style.setProperty("--y", (Math.random()*400-200)+"px");
+        c.appendChild(p);
+        setTimeout(()=>p.remove(),1000);
+    }
+}
+
+function spin() {
+    const mise = parseInt(document.getElementById("mise").value);
+    const res = document.getElementById("result");
+
+    if (mise <= 0 || mise > credits) {
+        res.textContent = "❌ Mise invalide";
+        res.style.color = "red";
+        return;
+    }
+
+    credits -= mise;
+    save();
+    creditsEl.textContent = credits;
+
+    animate(slot1); animate(slot2); animate(slot3);
+
+    setTimeout(() => {
+        slot1.textContent = symbols[Math.floor(Math.random()*symbols.length)];
+        slot2.textContent = symbols[Math.floor(Math.random()*symbols.length)];
+        slot3.textContent = symbols[Math.floor(Math.random()*symbols.length)];
+
+        if (slot1.textContent === slot2.textContent && slot2.textContent === slot3.textContent) {
+            const win = mise * 15;
+            credits += win;
+            res.textContent = "💥 JACKPOT +" + win;
+            res.style.color = "gold";
+            jackpotExplosion();
+        } else if (
+            slot1.textContent === slot2.textContent ||
+            slot2.textContent === slot3.textContent ||
+            slot1.textContent === slot3.textContent
+        ) {
+            const win = mise * 3;
+            credits += win;
+            res.textContent = "✨ Gagné +" + win;
+            res.style.color = "#7dd3ff";
+        } else {
+            res.textContent = "❌ Perdu…";
+            res.style.color = "#ccc";
+        }
+
+        save();
+        creditsEl.textContent = credits;
+
+        if (credits <= 0) {
+            document.getElementById("gameOverOverlay").style.display = "flex";
+            document.getElementById("leverBall").onclick = null;
+        }
+    }, 1000);
+}
+
+function restartGame() {
+    credits = 200;
+    save();
+    creditsEl.textContent = credits;
+    document.getElementById("gameOverOverlay").style.display = "none";
+    document.getElementById("leverBall").onclick = pullLever;
+    document.getElementById("result").textContent = "";
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Jeu caméra et Micro</title>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #f2f2f2;
+    text-align: center;
+    padding: 15px;
+}
+button {
+    padding: 10px 15px;
+    margin: 5px;
+    font-size: 16px;
+    border: none;
+    border-radius: 6px;
+    background: #007bff;
+    color: white;
+    cursor: pointer;
+}
+button:hover { background: #005fcc; }
+
+video, canvas, img {
+    width: 90%;
+    max-width: 400px;
+    border-radius: 10px;
+    border: 2px solid #333;
+    margin-top: 10px;
+}
+
+#photoSection, #microSection { display: none; }
+
+.slider-container { margin: 10px; }
+
+#countdown {
+    font-size: 40px;
+    color: red;
+    font-weight: bold;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Jeu caméra📸 et Micro🎤</h1>
+
+<button onclick="showMicro()">🎤 Micro</button>
+<button onclick="showPhoto()">📸 Photo</button>
+
+<!-- ================= MICRO ================= -->
+<div id="microSection">
+    <h2>🎤 Enregistrement audio</h2>
+    <button id="startBtn">🎙️ Start</button>
+    <button id="stopBtn" disabled>⏹️ Stop</button>
+    <div id="audioPlayback"></div>
+</div>
+
+<!-- ================= PHOTO ================= -->
+<div id="photoSection">
+    <h2>📸 Mode Selfie</h2>
+
+    <video id="video" autoplay playsinline></video>
+    <div id="countdown"></div>
+
+    <br>
+    <button onclick="startCountdown()">⏱️ Photo (3s)</button>
+    <button onclick="switchCamera()">🔄 Avant / Arrière</button>
+    <button onclick="toggleMirror()">🪞 Miroir</button>
+
+    <canvas id="canvas"></canvas>
+    <img id="photo">
+
+    <h3>🎛 Réglages</h3>
+    <div class="slider-container">
+        Gris <input type="range" id="grayscale" min="0" max="100" value="0">
+    </div>
+    <div class="slider-container">
+        Luminosité <input type="range" id="brightness" min="50" max="150" value="100">
+    </div>
+    <div class="slider-container">
+        Contraste <input type="range" id="contrast" min="50" max="150" value="100">
+    </div>
+
+    <br>
+    <button onclick="undo()">↩️ Annuler</button>
+    <button onclick="save()">💾 Enregistrer</button>
+</div>
+
+<script>
+/* ================= NAV ================= */
+function showMicro(){
+    microSection.style.display="block";
+    photoSection.style.display="none";
+}
+function showPhoto(){
+    photoSection.style.display="block";
+    microSection.style.display="none";
+}
+
+/* ================= MICRO (CORRIGÉ) ================= */
+let recorder, audioChunks = [];
+
+startBtn.onclick = async () => {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+    recorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+    audioChunks = [];
+
+    recorder.ondataavailable = e => audioChunks.push(e.data);
+
+    recorder.onstop = () => {
+        const blob = new Blob(audioChunks, { type: "audio/webm" });
+        const url = URL.createObjectURL(blob);
+
+        audioPlayback.innerHTML = `
+            <audio controls src="${url}"></audio><br>
+            <a href="${url}" download="enregistrement.webm">💾 Télécharger l'audio</a>
+        `;
+    };
+
+    recorder.start();
+    startBtn.disabled = true;
+    stopBtn.disabled = false;
+};
+
+stopBtn.onclick = () => {
+    recorder.stop();
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+};
+
+/* ================= PHOTO ================= */
+const video = document.getElementById("video");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+const photo = document.getElementById("photo");
+const countdown = document.getElementById("countdown");
+
+let facing = "user";
+let mirror = true;
+let originalImage = null;
+let stream = null;
+
+async function startCamera(){
+    if(stream) stream.getTracks().forEach(t => t.stop());
+    stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: facing }
+    });
+    video.srcObject = stream;
+}
+startCamera();
+
+function switchCamera(){
+    facing = facing === "user" ? "environment" : "user";
+    startCamera();
+}
+
+function toggleMirror(){
+    mirror = !mirror;
+    video.style.transform = mirror ? "scaleX(-1)" : "scaleX(1)";
+}
+
+function startCountdown(){
+    let i = 3;
+    countdown.textContent = i;
+    const timer = setInterval(() => {
+        i--;
+        countdown.textContent = i > 0 ? i : "📸";
+        if(i < 0){
+            clearInterval(timer);
+            countdown.textContent = "";
+            takePhoto();
+        }
+    }, 1000);
+}
+
+function takePhoto(){
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.save();
+    if(mirror){
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+    }
+    ctx.drawImage(video, 0, 0);
+    ctx.restore();
+    originalImage = canvas.toDataURL();
+    photo.src = originalImage;
+}
+
+/* ================= FILTRES ================= */
+["grayscale","brightness","contrast"].forEach(id=>{
+    document.getElementById(id).oninput = applyFilters;
+});
+
+function applyFilters(){
+    if(!originalImage) return;
+    const img = new Image();
+    img.src = originalImage;
+    img.onload = () => {
+        ctx.filter = `
+            grayscale(${grayscale.value}%)
+            brightness(${brightness.value}%)
+            contrast(${contrast.value}%)
+        `;
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        photo.src = canvas.toDataURL();
+    };
+}
+
+/* ================= ACTIONS ================= */
+function undo(){
+    if(originalImage) photo.src = originalImage;
+}
+function save(){
+    const a = document.createElement("a");
+    a.href = photo.src;
+    a.download = "selfie.png";
+    a.click();
+}
+</script>
+
+</body>
+</html>

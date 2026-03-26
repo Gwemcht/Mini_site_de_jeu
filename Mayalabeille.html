@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Maya l’Abeille</title>
+<style>
+body{margin:0;overflow:hidden;background:#8fd0ff;font-family:Arial;}
+svg{position:absolute;}
+
+/* Menu départ */
+#startScreen{
+position:absolute;width:100%;height:100%;
+background:linear-gradient(#ffcc33,#ff9900);
+display:flex;flex-direction:column;
+align-items:center;justify-content:center;
+z-index:200;color:white;text-align:center;
+}
+#startScreen h1{font-size:60px;text-shadow:3px 3px 6px black;margin-bottom:40px;}
+#startScreen button{
+font-size:30px;padding:15px 35px;
+background:#ff5722;border:none;
+color:white;cursor:pointer;border-radius:10px;
+transition:background 0.3s, transform 0.2s;
+}
+#startScreen button:hover{
+background:#ff9800;
+transform:scale(1.05);
+}
+
+/* HUD */
+#hud{position:absolute;top:10px;left:10px;font-size:24px;color:white;text-shadow:2px 2px 4px #000;}
+#vieBar{position:absolute;top:50px;left:10px;width:200px;height:20px;background:#400;border:2px solid #fff;}
+#vie{height:100%;background:#0f0;width:200px;}
+
+/* Game Over */
+#gameOverScreen{
+position:absolute;top:50%;left:50%;
+transform:translate(-50%,-50%);
+text-align:center;font-size:40px;
+color:white;background:rgba(0,0,0,0.7);
+padding:50px;border-radius:10px;display:none;
+}
+#gameOverScreen button{
+font-size:30px;padding:15px 35px;
+background:#ff5722;border:none;color:white;
+cursor:pointer;border-radius:10px;
+transition:background 0.3s, transform 0.2s;
+}
+#gameOverScreen button:hover{
+background:#ff9800;transform:scale(1.05);
+}
+</style>
+</head>
+<body>
+
+<!-- Menu départ -->
+<div id="startScreen">
+<h1>🌼 Maya l’Abeille 🐝</h1>
+<button onclick="startGame()">Jouer</button>
+</div>
+
+<div id="hud">Score : 0 | Nectar : 0/15 | Niveau : 1</div>
+<div id="vieBar"><div id="vie"></div></div>
+
+<!-- Ruche -->
+<svg id="ruche" width="130" height="130" viewBox="0 0 100 100"
+style="left:20px;top:50%;transform:translateY(-50%)">
+<polygon points="10,50 50,10 90,50 50,90"
+fill="orange" stroke="brown" stroke-width="5"/>
+</svg>
+
+<!-- Maya -->
+<svg id="maya" width="90" height="90" viewBox="0 0 100 100">
+<ellipse cx="50" cy="55" rx="25" ry="20"
+fill="yellow" stroke="black" stroke-width="3"/>
+<line x1="35" y1="40" x2="35" y2="70" stroke="black" stroke-width="5"/>
+<line x1="50" y1="40" x2="50" y2="70" stroke="black" stroke-width="5"/>
+<line x1="65" y1="40" x2="65" y2="70" stroke="black" stroke-width="5"/>
+<!-- ailes -->
+<ellipse cx="35" cy="30" rx="15" ry="25" fill="white" fill-opacity="0.6">
+<animateTransform attributeName="transform" type="rotate" values="-15 35 30;15 35 30;-15 35 30" dur="0.2s" repeatCount="indefinite"/>
+</ellipse>
+<ellipse cx="65" cy="30" rx="15" ry="25" fill="white" fill-opacity="0.6">
+<animateTransform attributeName="transform" type="rotate" values="15 65 30;-15 65 30;15 65 30" dur="0.2s" repeatCount="indefinite"/>
+</ellipse>
+</svg>
+
+<!-- Game Over -->
+<div id="gameOverScreen">
+<h1>Game Over</h1>
+<p>Score : <span id="finalScore">0</span></p>
+<button onclick="location.reload()">Recommencer</button>
+</div>
+
+<!-- Son de fond -->
+<audio id="sonBzz" src="images et musiques/flying-mosquito-105770(1).mp3" loop></audio>
+
+<script>
+let gameStarted=false;
+let maya=document.getElementById("maya");
+let ruche=document.getElementById("ruche");
+let hud=document.getElementById("hud");
+let vieDiv=document.getElementById("vie");
+let gameOver=document.getElementById("gameOverScreen");
+let finalScore=document.getElementById("finalScore");
+let sonBzz=document.getElementById("sonBzz");
+sonBzz.volume=0.2;
+
+let score=0,nectar=0,niveau=1,vie=5;
+let frelons=[],fleurs=[];
+let vitesse=3;
+let soundStarted=false;
+
+// --- Démarrer le jeu ---
+function startGame(){
+document.getElementById("startScreen").style.display="none";
+gameStarted=true;
+spawnInitialFleurs();
+}
+
+// --- Déplacement Maya ---
+document.addEventListener("mousemove",e=>{
+if(!gameStarted)return;
+maya.style.left=(e.clientX-45)+"px";
+maya.style.top=(e.clientY-45)+"px";
+if(!soundStarted){sonBzz.play().catch(()=>{});soundStarted=true;}
+});
+
+// --- HUD ---
+function updateHUD(){
+hud.innerText="Score : "+score+" | Nectar : "+nectar+"/15 | Niveau : "+niveau;
+vieDiv.style.width=(vie*40)+"px";
+}
+
+// --- Fleurs ---
+function spawnFleur(){
+let f=document.createElementNS("http://www.w3.org/2000/svg","svg");
+f.setAttribute("width","80");f.setAttribute("height","80");f.setAttribute("viewBox","0 0 100 100");
+f.innerHTML=`
+<circle cx="50" cy="50" r="15" fill="yellow"/>
+<ellipse cx="50" cy="10" rx="15" ry="25" fill="pink"/>
+<ellipse cx="50" cy="90" rx="15" ry="25" fill="pink"/>
+<ellipse cx="10" cy="50" rx="25" ry="15" fill="pink"/>
+<ellipse cx="90" cy="50" rx="25" ry="15" fill="pink"/>
+`;
+f.style.position="absolute";
+f.style.left=(250+Math.random()*800)+"px";
+f.style.top=(Math.random()*(window.innerHeight-100))+"px";
+document.body.appendChild(f);
+fleurs.push(f);
+}
+function spawnInitialFleurs(){for(let i=0;i<6;i++)spawnFleur();}
+
+// --- Frelons avec ailes ---
+function spawnFrelon(){
+let f=document.createElementNS("http://www.w3.org/2000/svg","svg");
+f.setAttribute("width","100");f.setAttribute("height","100");f.setAttribute("viewBox","0 0 100 100");
+f.innerHTML=`
+<ellipse cx="50" cy="55" rx="30" ry="20" fill="brown"/>
+<ellipse cx="50" cy="55" rx="20" ry="12" fill="yellow"/>
+<ellipse cx="30" cy="30" rx="15" ry="25" fill="white" fill-opacity="0.6">
+<animateTransform attributeName="transform" type="rotate" values="-20 30 30;20 30 30;-20 30 30" dur="0.2s" repeatCount="indefinite"/>
+</ellipse>
+<ellipse cx="70" cy="30" rx="15" ry="25" fill="white" fill-opacity="0.6">
+<animateTransform attributeName="transform" type="rotate" values="20 70 30;-20 70 30;20 70 30" dur="0.2s" repeatCount="indefinite"/>
+</ellipse>
+`;
+f.style.position="absolute";
+f.style.left=window.innerWidth+"px";
+f.style.top=Math.random()*(window.innerHeight-100)+"px";
+document.body.appendChild(f);
+frelons.push(f);
+}
+
+// --- Spawn régulier frelons ---
+setInterval(()=>{
+if(gameStarted && frelons.length<3)spawnFrelon();
+},1500);
+
+// --- Collision ---
+function collision(a,b){
+let ra=a.getBoundingClientRect();
+let rb=b.getBoundingClientRect();
+return !(ra.right<rb.left||ra.left>rb.right||ra.bottom<rb.top||ra.top>rb.bottom);
+}
+
+// --- Boucle jeu ---
+setInterval(()=>{
+if(!gameStarted)return;
+
+// Frelons
+for(let i=frelons.length-1;i>=0;i--){
+let f=frelons[i];
+f.style.left=(parseInt(f.style.left)-vitesse)+"px";
+if(collision(maya,f)){
+vie--;f.remove();frelons.splice(i,1);
+if(vie<=0){
+finalScore.textContent=score;
+gameOver.style.display="block";
+gameStarted=false;
+return;
+}
+}
+}
+
+// Fleurs
+for(let i=fleurs.length-1;i>=0;i--){
+if(nectar<15 && collision(maya,fleurs[i])){
+nectar++;fleurs[i].remove();fleurs.splice(i,1);spawnFleur();
+}
+}
+
+// Ruche
+if(nectar===15 && collision(maya,ruche)){
+score+=5;nectar=0;vitesse+=0.5;
+if(score%25===0)niveau++;
+}
+
+updateHUD();
+},40);
+</script>
+</body>
+</html>
