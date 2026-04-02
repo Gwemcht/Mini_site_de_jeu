@@ -49,6 +49,26 @@ transition:background 0.3s, transform 0.2s;
 #gameOverScreen button:hover{
 background:#ff9800;transform:scale(1.05);
 }
+
+#menuBtn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 8px 15px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(to right,#ff9800,#ffb74d);
+  color: white;
+  box-shadow: 0 0 10px #ff9800;
+  cursor: pointer;
+  z-index: 20;
+}
+
+#menuBtn:hover {
+  transform: scale(1.05);
+}
+
 </style>
 </head>
 <body>
@@ -92,6 +112,8 @@ fill="yellow" stroke="black" stroke-width="3"/>
 <button onclick="location.reload()">Recommencer</button>
 </div>
 
+<button onclick="goToMenu()" id="menuBtn">🏠 Menu</button>
+
 <!-- Son de fond -->
 <audio id="sonBzz" src="images et musiques/flying-mosquito-105770(1).mp3" loop></audio>
 
@@ -130,6 +152,10 @@ if(!soundStarted){sonBzz.play().catch(()=>{});soundStarted=true;}
 function updateHUD(){
 hud.innerText="Score : "+score+" | Nectar : "+nectar+"/15 | Niveau : "+niveau;
 vieDiv.style.width=(vie*40)+"px";
+}
+
+function goToMenu() {
+  window.location.href = "index.html";
 }
 
 // --- Fleurs ---

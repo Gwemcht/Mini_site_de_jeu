@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <title>Mini Mario Kart</title>
   <style>
+
     /* ----- Style général de la page ----- */
     body {
       font-family: 'Trebuchet MS', sans-serif;
@@ -131,6 +132,25 @@
       cursor:pointer; transition:0.2s;
     }
     button:hover { transform:scale(1.05); background:linear-gradient(to right,#00b04d,#00c060); }
+
+    #menuBtn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 8px 15px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(to right,#ff9800,#ffb74d);
+  color: white;
+  box-shadow: 0 0 10px #ff9800;
+  cursor: pointer;
+  z-index: 20;
+}
+
+#menuBtn:hover {
+  transform: scale(1.05);
+}
   </style>
 </head>
 <body tabindex="0">
@@ -144,6 +164,8 @@
   <div id="timer">Temps: 60s</div>
   <div id="level">Niveau: 1</div>
 </div>
+
+<button onclick="goToMenu()" id="menuBtn">🏠 Menu</button>
 
 <!-- Zone de jeu -->
 <div id="game">
@@ -267,6 +289,10 @@ function loadLevel(index){
     boss.style.top='0px'; boss.style.left='0px';
     game.appendChild(boss);
   }
+}
+
+function goToMenu() {
+  window.location.href = "index.html";
 }
 
 function startGame(){

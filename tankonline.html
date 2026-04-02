@@ -17,6 +17,26 @@ h1{margin:10px;}
 button{padding:10px 25px;font-size:18px;margin-top:20px;cursor:pointer;}
 :focus{outline:none;}
 #history{margin-top:10px;font-size:14px;}
+
+#menuBtn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 8px 15px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(to right,#ff9800,#ffb74d);
+  color: white;
+  box-shadow: 0 0 10px #ff9800;
+  cursor: pointer;
+  z-index: 20;
+}
+
+#menuBtn:hover {
+  transform: scale(1.05);
+}
+
 </style>
 </head>
 <body>
@@ -45,6 +65,8 @@ button{padding:10px 25px;font-size:18px;margin-top:20px;cursor:pointer;}
   <h2 id="endMsg"></h2>
   <button onclick="location.reload()">Rejouer</button>
 </div>
+
+<button onclick="goToMenu()" id="menuBtn">🏠 Menu</button>
 
 <audio id="shootSound" src="images et musiques/_fr_sound_tir-laser-1_ - Copie.mp3"></audio>
 <audio id="bgMusic" src="http://soundimage.org/wp-content/uploads/2014/10/Light-Years_v001.mp3" loop></audio>
@@ -122,6 +144,10 @@ let sessionId=null;
 
 function makeSessionId(){
   return myStoredId; // ID complet permanent
+}
+
+function goToMenu() {
+  window.location.href = "index.html";
 }
 
 document.getElementById("createBtn").onclick=function(){

@@ -59,6 +59,26 @@ background:#120196;
 }
 
 #menu,#gameUI{display:none;}
+
+#menuBtn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 8px 15px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(to right,#ff9800,#ffb74d);
+  color: white;
+  box-shadow: 0 0 10px #ff9800;
+  cursor: pointer;
+  z-index: 20;
+}
+
+#menuBtn:hover {
+  transform: scale(1.05);
+}
+
 </style>
 </head>
 
@@ -79,6 +99,8 @@ background:#120196;
 <button onclick="backMenu()">🏠 Accueil</button>
 <canvas id="game" width="800" height="300"></canvas>
 </div>
+
+<button onclick="goToMenu()" id="menuBtn">🏠 Menu</button>
 
 </div>
 
@@ -147,6 +169,10 @@ if(player.jumps>0){
 player.vy=-14;
 player.jumps--;
 }
+}
+
+function goToMenu() {
+  window.location.href = "index.html";
 }
 
 /* MENU */

@@ -122,6 +122,26 @@ button:active{
     opacity:0.5;
     cursor:not-allowed;
 }
+
+#menuBtn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 8px 15px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(to right,#ff9800,#ffb74d);
+  color: white;
+  box-shadow: 0 0 10px #ff9800;
+  cursor: pointer;
+  z-index: 20;
+}
+
+#menuBtn:hover {
+  transform: scale(1.05);
+}
+
 </style>
 
 </head>
@@ -209,6 +229,8 @@ button:active{
   <button onclick="toggleSkins()">Fermer</button>
 </div>
 
+<button onclick="goToMenu()" id="menuBtn">🏠 Menu</button>
+
 <canvas id="game" width="900" height="400"></canvas>
 
 <script>
@@ -283,6 +305,10 @@ function openShop(){
     document.getElementById("shop").style.display="block";
     updateShop();
     updateSkinsDisplay();
+}
+
+function goToMenu() {
+  window.location.href = "index.html";
 }
 
 function closeShop(){

@@ -88,6 +88,26 @@
     display: none;
   }
   #replayBtn:hover { background-color: #2ecc71; }
+
+#menuBtn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 8px 15px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(to right,#ff9800,#ffb74d);
+  color: white;
+  box-shadow: 0 0 10px #ff9800;
+  cursor: pointer;
+  z-index: 20;
+}
+
+#menuBtn:hover {
+  transform: scale(1.05);
+}
+
 </style>
 </head>
 
@@ -100,6 +120,8 @@
   <div id="gameOver">GAME OVER</div>
   <button id="replayBtn">Rejouer</button>
 </div>
+
+<button onclick="goToMenu()" id="menuBtn">🏠 Menu</button>
 
 <audio id="bgMusic" src="images et musiques/machtu pichtou.mp3" loop></audio>
 
@@ -178,6 +200,10 @@ function jump() {
   }
 
   player.style.top = playerY + "px";
+}
+
+function goToMenu() {
+  window.location.href = "index.html";
 }
 
 function generateObstacles() {
