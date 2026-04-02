@@ -127,6 +127,21 @@ button:last-of-type {
   transform: scale(1.05);
 }
 
+#menuBtn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 8px 15px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(to right,#ff9800,#ffb74d);
+  color: white;
+  box-shadow: 0 0 10px #ff9800;
+  cursor: pointer;
+  z-index: 20;
+}
+
 </style>
 </head>
 
@@ -148,6 +163,8 @@ button:last-of-type {
 
     <button onclick="resetProgress()">Réinitialiser la progression</button>
 </div>
+
+<button onclick="goToMenu()" id="menuBtn">🏠 Menu</button>
 
 <script>
 const enigmes = [
@@ -242,6 +259,11 @@ function checkCode() {
         message.style.color = "#f00";
     }
 }
+
+function goToMenu() {
+  window.location.href = "index.html";
+}
+
 
 loadProgress();
 </script>
