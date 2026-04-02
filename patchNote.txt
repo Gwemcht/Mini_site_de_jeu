@@ -1,1 +1,5 @@
 v0.00.1 = lancement
+v0.00.2 = bomberman modifié
+
+
+lien de Mini site de jeu   : https://gwemcht.github.io/Mini_site_de_jeu/
