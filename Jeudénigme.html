@@ -127,6 +127,21 @@ button:last-of-type {
   transform: scale(1.05);
 }
 
+#menuBtn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 8px 15px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(to right,#ff9800,#ffb74d);
+  color: white;
+  box-shadow: 0 0 10px #ff9800;
+  cursor: pointer;
+  z-index: 20;
+}
+
 </style>
 </head>
 
@@ -149,15 +164,22 @@ button:last-of-type {
     <button onclick="resetProgress()">Réinitialiser la progression</button>
 </div>
 
+<button onclick="goToMenu()" id="menuBtn">🏠 Menu</button>
+
 <script>
 const enigmes = [
     { question: "Je rase tous les jours pourtant j'ai toujours de la barbe", answer: "barbier", timed: true, time: 30  },
-    { question: "Je suis petit et rond, je roule souvent, mais je ne suis pas une boule. Qui suis-je ?", answer: "roue", timed: true, time: 30  },
     { question: "Inverse le mot 'desserts'.", answer: "stressed" },
     { question: "Quel est le résultat de 6 × 7 ?", answer: "42", timed: true, time: 5 },
     { question: "Je fais le tour du monde tout en restant dans mon coin. Qui suis-je ?", answer: "timbre", timed: true, time: 10  },
     { question: "Plus j'ai de gardiens, moins je suis gardé. Qui suis-je ?", answer: "secret" , timed: true, time: 30 },
-    { question: "Je commence la nuit et je termine le matin, qui suis-je ?", answer: "n", timed: true, time: 30  }
+    { question: "Qu'est-ce qui est plein de trous mais retient l'eau ?", answer: "éponge" , timed: true, time: 30 },
+    { question: "Qu'est-ce qui tombe, ne se blesse pas et ne fait pas de bruit ?", answer: "nuit" , timed: true, time: 30 },
+    { question: "Je commence la nuit et je termine le matin, qui suis-je ?", answer: "n", timed: true, time: 30  },
+    { question: "Sans lui Paris serait pris, sans combat ni bataille.", answer: "a", timed: true, time: 30  },
+    { question: "Quelle est la lettre la plus tranchante ?", answer: "h", timed: true, time: 30  },
+    { question: "3 araignées attrapent 3 mouches en 3 minutes. Combien faut-il d’araignées pour attraper 60 mouches en 60 minutes ?", answer: "3", timed: true, time: 60  },
+    { question: "Qu’est-ce qu’il y a entre terre et mer ?", answer: "et", timed: true, time: 60  }
 ];
 
 let level = 0;
@@ -242,6 +264,11 @@ function checkCode() {
         message.style.color = "#f00";
     }
 }
+
+function goToMenu() {
+  window.location.href = "index.html";
+}
+
 
 loadProgress();
 </script>

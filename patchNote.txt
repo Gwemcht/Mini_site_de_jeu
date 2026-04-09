@@ -1,5 +1,7 @@
 v0.00.1 = lancement
 v0.00.2 = bomberman modifié
+v0.00.3 = ajout du bouton menu
+v0.00.4 = ajout du bouton menu dans Jeudénigme.html
 
 
 lien de Mini site de jeu   : https://gwemcht.github.io/Mini_site_de_jeu/

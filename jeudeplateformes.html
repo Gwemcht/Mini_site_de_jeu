@@ -5,223 +5,242 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Jeu de Plateformes - 20 Niveaux</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  }
 
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
+body {
+font-family: Arial, sans-serif;
+display: flex;
+justify-content: center;
+align-items: center;
+min-height: 100vh;
+background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
 
-        .game-container {
-            position: relative;
-            width: 800px;
-            height: 600px;
-            background: linear-gradient(180deg, #87ceeb 0%, #e0f6ff 100%);
-            border: 3px solid #333;
-            overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-        }
+.game-container {
+position: relative;
+width: 800px;
+height: 600px;
+background: linear-gradient(180deg, #87ceeb 0%, #e0f6ff 100%);
+border: 3px solid #333;
+overflow: hidden;
+box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
 
-        .player {
-            position: absolute;
-            width: 30px;
-            height: 40px;
-            background: #ff6b6b;
-            border-radius: 5px;
-            z-index: 10;
-        }
+.player {
+position: absolute;
+width: 30px;
+height: 40px;
+background: #ff6b6b;
+border-radius: 5px;
+z-index: 10;
+}
 
-        .player.invulnerable {
-            animation: invulnerable-blink 0.3s infinite;
-        }
+.player.invulnerable {
+animation: invulnerable-blink 0.3s infinite;
+}
 
-        @keyframes invulnerable-blink {
-            0%, 50% { opacity: 1; }
-            51%, 100% { opacity: 0.5; }
-        }
+@keyframes invulnerable-blink {
+0%, 50% { opacity: 1; }
+51%, 100% { opacity: 0.5; }
+}
 
-        .player::before {
-            content: '';
-            position: absolute;
-            width: 8px;
-            height: 8px;
-            background: #000;
-            border-radius: 50%;
-            top: 10px;
-            left: 6px;
-        }
+.player::before {
+content: '';
+position: absolute;
+width: 8px;
+height: 8px;
+background: #000;
+border-radius: 50%;
+top: 10px;
+left: 6px;
+}
 
-        .player::after {
-            content: '';
-            position: absolute;
-            width: 8px;
-            height: 8px;
-            background: #000;
-            border-radius: 50%;
-            top: 10px;
-            right: 6px;
-        }
+.player::after {
+content: '';
+position: absolute;
+width: 8px;
+height: 8px;
+background: #000;
+border-radius: 50%;
+top: 10px;
+right: 6px;
+}
 
-        .platform {
-            position: absolute;
-            background: #4CAF50;
-            border: 2px solid #2e7d32;
-            border-radius: 3px;
-        }
+/* 🔥 PLATEFORMES AVEC IMAGE PNG */
+.platform {
+    position: absolute;
+    background-image: url("images et musiques/plateforme.png"); /* ton PNG */
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-radius: 3px;
+}
 
-        .platform-moving {
-            background: #2196F3;
-            border-color: #1565c0;
-        }
+/* 🔥 Plateformes mobiles (même image + effet visuel) */
+.platform-moving {
+filter: hue-rotate(180deg) brightness(1.1);
+}
 
-        .enemy {
-            position: absolute;
-            width: 30px;
-            height: 30px;
-            background: #ff9800;
-            border-radius: 50%;
-            z-index: 5;
-        }
+.enemy {
+position: absolute;
+width: 30px;
+height: 30px;
+background: #ff9800;
+border-radius: 50%;
+z-index: 5;
+}
 
-        .enemy::before {
-            content: '';
-            position: absolute;
-            width: 6px;
-            height: 6px;
-            background: #000;
-            border-radius: 50%;
-            top: 8px;
-            left: 5px;
-        }
+.enemy::before {
+content: '';
+position: absolute;
+width: 6px;
+height: 6px;
+background: #000;
+border-radius: 50%;
+top: 8px;
+left: 5px;
+}
 
-        .enemy::after {
-            content: '';
-            position: absolute;
-            width: 6px;
-            height: 6px;
-            background: #000;
-            border-radius: 50%;
-            top: 8px;
-            right: 5px;
-        }
+.enemy::after {
+content: '';
+position: absolute;
+width: 6px;
+height: 6px;
+background: #000;
+border-radius: 50%;
+top: 8px;
+right: 5px;
+}
 
-        .star {
-            position: absolute;
-            width: 30px;
-            height: 30px;
-            font-size: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 4;
-            animation: bounce 0.6s infinite;
-        }
+.star {
+position: absolute;
+width: 30px;
+height: 30px;
+font-size: 24px;
+display: flex;
+align-items: center;
+justify-content: center;
+z-index: 4;
+animation: bounce 0.6s infinite;
+}
 
-        @keyframes bounce {
-            0%, 100% { transform: translateY(0); }
-            50% { transform: translateY(-10px); }
-        }
+@keyframes bounce {
+0%, 100% { transform: translateY(0); }
+50% { transform: translateY(-10px); }
+}
 
-        .goal {
-            position: absolute;
-            width: 40px;
-            height: 40px;
-            background: #ff1744;
-            border-radius: 50%;
-            z-index: 4;
-            box-shadow: 0 0 15px rgba(255, 23, 68, 0.8);
-            animation: glow 1s infinite;
-        }
+.goal {
+position: absolute;
+width: 40px;
+height: 40px;
+background: #ff1744;
+border-radius: 50%;
+z-index: 4;
+box-shadow: 0 0 15px rgba(255, 23, 68, 0.8);
+animation: glow 1s infinite;
+}
 
-        @keyframes glow {
-            0%, 100% { box-shadow: 0 0 15px rgba(255, 23, 68, 0.8); }
-            50% { box-shadow: 0 0 25px rgba(255, 23, 68, 1); }
-        }
+@keyframes glow {
+0%, 100% { box-shadow: 0 0 15px rgba(255, 23, 68, 0.8); }
+50% { box-shadow: 0 0 25px rgba(255, 23, 68, 1); }
+}
 
-        .ui {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            color: #333;
-            font-size: 18px;
-            font-weight: bold;
-            z-index: 20;
-            background: rgba(255, 255, 255, 0.8);
-            padding: 10px 15px;
-            border-radius: 5px;
-        }
+.ui {
+position: absolute;
+top: 10px;
+left: 10px;
+color: #333;
+font-size: 18px;
+font-weight: bold;
+z-index: 20;
+background: rgba(255, 255, 255, 0.8);
+padding: 10px 15px;
+border-radius: 5px;
+}
 
-        .stars-display {
-            font-size: 24px;
-            margin-top: 5px;
-        }
+.stars-display {
+font-size: 24px;
+margin-top: 5px;
+}
 
-        .invulnerability-timer {
-            font-size: 14px;
-            color: #ff6b6b;
-            margin-top: 5px;
-        }
+.invulnerability-timer {
+font-size: 14px;
+color: #ff6b6b;
+margin-top: 5px;
+}
 
-        .game-over {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
-        }
+.game-over {
+position: absolute;
+width: 100%;
+height: 100%;
+background: rgba(0, 0, 0, 0.8);
+display: none;
+flex-direction: column;
+justify-content: center;
+align-items: center;
+z-index: 100;
+}
 
-        .game-over-text {
-            color: white;
-            font-size: 48px;
-            font-weight: bold;
-            text-align: center;
-            margin-bottom: 20px;
-        }
+.game-over-text {
+color: white;
+font-size: 48px;
+font-weight: bold;
+text-align: center;
+margin-bottom: 20px;
+}
 
-        .stars-rating {
-            font-size: 60px;
-            margin: 20px 0;
-            color: #FFD700;
-        }
+.stars-rating {
+font-size: 60px;
+margin: 20px 0;
+color: #FFD700;
+}
 
-        .game-over-button {
-            background: #4CAF50;
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            font-size: 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            margin: 10px;
-        }
+.game-over-button {
+background: #4CAF50;
+color: white;
+border: none;
+padding: 15px 30px;
+font-size: 20px;
+border-radius: 5px;
+cursor: pointer;
+margin: 10px;
+}
 
-        .game-over-button:hover {
-            background: #45a049;
-        }
+.game-over-button:hover {
+background: #45a049;
+}
 
-        .instructions {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            color: #333;
-            font-size: 12px;
-            background: rgba(255, 255, 255, 0.8);
-            padding: 8px 12px;
-            border-radius: 5px;
-            z-index: 20;
-        }
+.instructions {
+position: absolute;
+bottom: 10px;
+left: 10px;
+color: #333;
+font-size: 12px;
+background: rgba(255, 255, 255, 0.8);
+padding: 8px 12px;
+border-radius: 5px;
+z-index: 20;
+}
+
+#menuBtn {
+position: absolute;
+top: 10px;
+left: 10px;
+padding: 8px 15px;
+font-size: 16px;
+border-radius: 8px;
+border: none;
+background: linear-gradient(to right,#ff9800,#ffb74d);
+color: white;
+box-shadow: 0 0 10px #ff9800;
+cursor: pointer;
+z-index: 20;
+}
+
     </style>
 </head>
 <body>
@@ -244,6 +263,8 @@
             </div>
         </div>
     </div>
+
+    <button onclick="goToMenu()" id="menuBtn">🏠 Menu</button>
 
     <script>
         const gameContainer = document.getElementById('gameContainer');
@@ -499,6 +520,10 @@
                 gameContainer.appendChild(starEl);
             });
         }
+
+        function goToMenu() {
+            window.location.href = "index.html";
+      }
 
         function createGoal() {
             const goalEl = document.createElement('div');
