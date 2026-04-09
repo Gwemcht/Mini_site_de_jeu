@@ -3,6 +3,7 @@ v0.00.2 = bomberman modifié
 v0.00.3 = ajout du bouton menu sur tout les jeux
 v0.00.4 = Amélioration jeu d'énigme
 v0.00.5 = Amélioration de Snake et de SpaceInvader
+v0.00.6 = creation readME.md
 
 
     lien de Mini site de jeu   : https://gwemcht.github.io/Mini_site_de_jeu/
