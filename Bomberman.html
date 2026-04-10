@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Bomberman</title>
+<style>
+body{
+    background: radial-gradient(circle at top,#1f1f1f,#000);
+    font-family: 'Segoe UI', Arial;
+    color:white;
+    margin:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    overflow:hidden;
+}
+
+h1{
+    font-size:60px;
+    letter-spacing:4px;
+    text-shadow:0 0 10px #ffcc00,0 0 30px #ff8800;
+    margin-bottom:30px;
+}
+
+#menu{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    margin-top:60px;
+    animation:fadeIn 1s ease;
+}
+
+#menu button{
+    padding:15px 35px;
+    font-size:22px;
+    margin:12px;
+    cursor:pointer;
+    border:none;
+    border-radius:8px;
+    background:linear-gradient(45deg,#ffcc00,#ff8800);
+    color:black;
+    font-weight:bold;
+    transition:0.25s;
+    box-shadow:0 0 15px rgba(255,180,0,0.5);
+}
+
+#menu button:hover{
+    transform:scale(1.1);
+    box-shadow:0 0 25px #ffcc00;
+}
+
+#instructions{
+    margin-top:25px;
+    font-size:16px;
+    text-align:center;
+    opacity:0.8;
+}
+
+#ui{
+    position:absolute;
+    top:15px;
+    left:20px;
+    font-size:24px;
+    background:rgba(0,0,0,0.6);
+    padding:10px 18px;
+    border-radius:10px;
+    box-shadow:0 0 10px #000;
+    display:none;
+    z-index: 100;
+}
+
+#board{
+    width:525px;
+    height:525px;
+    position:relative;
+    border-radius:12px;
+    border:4px solid #ffcc00;
+    display:none;
+    margin-top:20px;
+    box-shadow:
+    0 0 20px #ffcc00,
+    0 0 60px rgba(255,200,0,0.3);
+    overflow:hidden;
+}
+
+.tile{
+    width:25px;
+    height:25px;
+    position:absolute;
+    z-index:1;
+}
+
+.tile img{
+    width:100%;
+    height:100%;
+    image-rendering:pixelated;
+}
+
+#gameScreen{
+    position:fixed;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    background:rgba(0,0,0,0.92);
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+    font-size:55px;
+    letter-spacing:3px;
+    text-shadow:0 0 15px #ffcc00;
+    display:none;
+    animation:fadeIn 0.6s;
+    z-index:1000;
+}
+
+#gameScreen button{
+    margin-top:35px;
+    padding:18px 40px;
+    font-size:22px;
+    cursor:pointer;
+    border:none;
+    border-radius:10px;
+    background:linear-gradient(45deg,#ffcc00,#ff8800);
+    color:black;
+    font-weight:bold;
+    transition:0.25s;
+}
+
+#gameScreen button:hover{
+    transform:scale(1.1);
+    box-shadow:0 0 20px #ffcc00;
+}
+
+#gameScreen .emoji{
+    position:absolute;
+    font-size:70px;
+    top:120px;
+    animation:bounce 1s infinite alternate;
+}
+
+#gameScreen .emoji-left{ left:30%; }
+#gameScreen .emoji-right{ right:30%; }
+
+@keyframes fadeIn{
+    from{opacity:0; transform:translateY(20px);}
+    to{opacity:1; transform:translateY(0);}
+}
+
+@keyframes bounce{
+    from{transform:translateY(0);}
+    to{transform:translateY(-15px);}
+}
+
+#inventory{
+    position:fixed;
+    bottom:10px;
+    left:50%;
+    transform:translateX(-50%);
+    display:none;
+    gap:10px;
+    background: rgba(0,0,0,0.5);
+    padding: 10px 15px;
+    border-radius: 12px;
+    z-index: 1000;
+}
+
+.inventory-item{
+    width:40px;
+    height:40px;
+    border:2px solid transparent;
+    cursor:pointer;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+}
+
+.inventory-item img{
+    max-width:100%;
+    max-height:100%;
+    image-rendering:pixelated;
+}
+
+.inventory-item.selected{
+    border-color:#ffcc00;
+    box-shadow:0 0 10px #ffcc00;
+}
+</style>
+</head>
+<body>
+
+<div id="menu">
+    <h1>BOMBERMAN</h1>
+    <button onclick="startGame(1)">1 Joueur</button>
+    <button onclick="startGame(2)">2 Joueurs</button>
+    <div id="instructions"></div>
+</div>
+
+<div id="ui">Niveau : <span id="level">1</span></div>
+<div id="board"></div>
+<div id="inventory"></div>
+
+<div id="gameScreen">
+    <div id="gameMessage"></div>
+    <div class="emoji emoji-left" id="emojiLeft"></div>
+    <div class="emoji emoji-right" id="emojiRight"></div>
+    <button onclick="restartGame()">Rejouer</button>
+</div>
+
+<script>
+const TILE=25, GRID=21;
+const board=document.getElementById("board");
+const ui=document.getElementById("ui");
+const inventoryDiv = document.getElementById("inventory");
+
+let inventory = { arbre: 0 };
+let selectedInventoryItem = null;
+let player1,player2;
+let ghosts=[];
+let bombs=[];
+let blocks=[];
+let mode=1;
+let level=1;
+let bombRange=2;
+let ghostSpeed=500;
+let touchTime=0;
+
+// --- INVENTAIRE ---
+function resetInventory(){
+    inventory = { arbre: 0 };
+    selectedInventoryItem = null;
+    renderInventory();
+}
+
+function renderInventory(){
+    inventoryDiv.innerHTML = "";
+    for(const key in inventory){
+        let div = document.createElement("div");
+        div.className = "inventory-item";
+        if(selectedInventoryItem === key) div.classList.add("selected");
+        let img = document.createElement("img");
+        img.src = "images et musiques/arbre.png";
+        div.appendChild(img);
+        div.appendChild(document.createTextNode(inventory[key]));
+        div.onclick = () => {
+            if(inventory[key] > 0){
+                selectedInventoryItem = key;
+                renderInventory();
+            }
+        };
+        inventoryDiv.appendChild(div);
+    }
+}
+
+// --- GAME START ---
+function startGame(selectedMode){
+    mode=selectedMode;
+    document.getElementById("menu").style.display="none";
+    board.style.display="block";
+    ui.style.display = (mode===1 ? "block" : "none");
+    inventoryDiv.style.display = (mode===1 ? "flex" : "none");
+    resetInventory();
+    if(mode===2){
+        document.getElementById("instructions").innerHTML=
+        "Joueur 1 : flèches + ESPACE<br>Joueur 2 : ZQSD + A";
+    }
+    startLevel();
+}
+
+function restartGame(){
+    document.getElementById("gameScreen").style.display="none";
+    document.getElementById("emojiLeft").innerText="";
+    document.getElementById("emojiRight").innerText="";
+    inventoryDiv.style.display = (mode===1 ? "flex" : "none");
+    resetInventory();
+    level=1; bombRange=2; ghostSpeed=500; touchTime=0;
+    startLevel();
+}
+
+// --- GENERATION MAP AVEC ZONES SÛRES ---
+function startLevel(){
+    board.innerHTML="";
+    blocks=[];
+    touchTime=0;
+    if(mode===1) document.getElementById("level").innerText=level;
+    generateMap();
+    spawnPlayers();
+    if(mode===1) spawnGhosts();
+}
+
+function generateMap(){
+    for(let y=0;y<GRID;y++){
+        for(let x=0;x<GRID;x++){
+            let tile=document.createElement("div");
+            tile.className="tile";
+            tile.style.left=x*TILE+"px";
+            tile.style.top=y*TILE+"px";
+
+            // Coin spawn sûr (3x3 autour du joueur 1)
+            let safeZone1 = (x<=2 && y<=2);
+            let safeZone2 = (x>=GRID-3 && y>=GRID-3);
+
+            if(x===0 || y===0 || x===GRID-1 || y===GRID-1 || (x%2===0 && y%2===0)){
+                tile.innerHTML='<img src="images et musiques/bloc.png">';
+                blocks.push({x,y,el:tile,destructible:false});
+            }else if(!safeZone1 && !safeZone2 && Math.random()<0.3){
+                if(Math.random()<0.5 || mode===2){
+                    tile.innerHTML = `
+                        <img src="images et musiques/FondBomberman.png">
+                        <img src="images et musiques/bloccassable.png" style="position:absolute;top:0;left:0;">
+                    `;
+                    blocks.push({x,y,el:tile,destructible:true,type:"bloc"});
+                }else{
+                    tile.innerHTML = `
+                        <img src="images et musiques/FondBomberman.png">
+                        <img src="images et musiques/arbre.png" style="position:absolute;top:0;left:0;">
+                    `;
+                    blocks.push({x,y,el:tile,destructible:true,type:"arbre"});
+                }
+            }else{
+                tile.innerHTML='<img src="images et musiques/FondBomberman.png">';
+            }
+            board.appendChild(tile);
+        }
+    }
+}
+
+// --- CREATION PAWN ---
+function createPawn(x,y,img){
+    let p=document.createElement("div");
+    p.className="tile";
+    p.style.left=x*TILE+"px";
+    p.style.top=y*TILE+"px";
+    p.style.zIndex = 10; 
+    p.innerHTML='<img src="'+img+'">';
+    board.appendChild(p);
+    return p;
+}
+
+// --- SPAWN JOUEURS ---
+function spawnPlayers(){
+    player1={x:1,y:1,el:createPawn(1,1,"images et musiques/Bomberman.png"),range:bombRange};
+    if(mode===2){
+        player2={x:GRID-2,y:GRID-2,el:createPawn(GRID-2,GRID-2,"images et musiques/Bomberman.png"),range:bombRange};
+    }
+}
+
+// --- SPAWN GHOST ---
+function spawnGhosts(){
+    ghosts=[];
+    let ghostCount=Math.ceil(level/2)+1;
+    for(let i=0;i<ghostCount;i++){
+        let x,y;
+        do{x=Math.floor(Math.random()*GRID); y=Math.floor(Math.random()*GRID);}
+        while(isWall(x,y) || isBlock(x,y) || (x===1 && y===1));
+        let g=createPawn(x,y,"images et musiques/MéchantBomberman.png");
+        g.gx=x; g.gy=y;
+        ghosts.push(g);
+        ghostAI(g);
+    }
+}
+
+// --- UTILS ---
+function isWall(x,y){ return x===0||y===0||x===GRID-1||y===GRID-1 || (x%2===0 && y%2===0 && !isBlock(x,y)); }
+function isBlock(x,y){ return blocks.some(b=>b.x===x && b.y===y); }
+
+function move(p,dx,dy){
+    let nx=p.x+dx, ny=p.y+dy;
+    if(nx<0||ny<0||nx>=GRID||ny>=GRID) return;
+    if(isBlock(nx,ny)) return;
+    p.x=nx; p.y=ny;
+    p.el.style.left=nx*TILE+"px";
+    p.el.style.top=ny*TILE+"px";
+}
+
+// --- BOMBE ET EXPLOSION ---
+function placeBomb(p){
+    let bomb=createPawn(p.x,p.y,"images et musiques/Bombe.png");
+    let b={x:p.x,y:p.y,range:p.range,el:bomb};
+    bombs.push(b);
+    setTimeout(()=>explode(b),2000);
+}
+
+function explode(bomb){
+    createFlame(bomb.x,bomb.y);
+    [[1,0],[-1,0],[0,1],[0,-1]].forEach(d=>{
+        for(let i=1;i<=bomb.range;i++){
+            let nx=bomb.x+d[0]*i, ny=bomb.y+d[1]*i;
+            if(nx<0||ny<0||nx>=GRID||ny>=GRID) break;
+            if(isWall(nx,ny)) break;
+            let block=getBlock(nx,ny);
+            if(block && block.destructible){
+                block.el.remove();
+                blocks = blocks.filter(b => !(b.x === nx && b.y === ny));
+                let tile = document.createElement("div");
+                tile.className = "tile";
+                tile.style.left = nx*TILE+"px";
+                tile.style.top = ny*TILE+"px";
+                tile.innerHTML = '<img src="images et musiques/FondBomberman.png">';
+                board.appendChild(tile);
+                if(mode===1 && block.type==="arbre"){ inventory.arbre++; renderInventory(); }
+                break;
+            }
+            createFlame(nx,ny);
+        }
+    });
+    bomb.el.remove();
+}
+
+function createFlame(x,y){
+    let f=createPawn(x,y,"images et musiques/Feu.png");
+    f.style.zIndex=5; checkDamage(x,y);
+    setTimeout(()=>f.remove(),300);
+}
+
+function getBlock(x,y){ return blocks.find(b=>b.x===x && b.y===y) || null; }
+
+function checkDamage(x,y){
+    if(mode===1){ if(player1 && player1.x===x && player1.y===y) showScreen("GAME OVER"); }
+    if(mode===2){
+        if(player1 && player1.x===x && player1.y===y) endGame("Joueur 2 gagne !");
+        if(player2 && player2.x===x && player2.y===y) endGame("Joueur 1 gagne !");
+    }
+    for(let i=ghosts.length-1;i>=0;i--){ let g=ghosts[i]; if(g.gx===x && g.gy===y){ g.remove(); ghosts.splice(i,1); } }
+    checkLevel();
+}
+
+setInterval(()=>{
+    if(mode!==1 || !player1) return;
+    if(ghosts.some(g=>g.gx===player1.x && g.gy===player1.y)){ touchTime+=100; }
+    if(touchTime>=2500) showScreen("GAME OVER");
+},100);
+
+function showScreen(msg){ document.getElementById("gameMessage").innerText=msg; document.getElementById("gameScreen").style.display="flex"; }
+function endGame(msg){
+    document.getElementById("gameMessage").innerText=msg;
+    document.getElementById("emojiLeft").innerText = msg.includes("1") ? "🏆" : "💩";
+    document.getElementById("emojiRight").innerText = msg.includes("2") ? "🏆" : "💩";
+    document.getElementById("gameScreen").style.display="flex";
+}
+
+function ghostAI(ghost){
+    setInterval(()=>{
+        if(!document.body.contains(ghost) || !player1) return;
+        let gx=ghost.gx, gy=ghost.gy;
+        let px=player1.x, py=player1.y;
+        let dx=px-gx, dy=py-gy;
+        let dirs=Math.abs(dx)>Math.abs(dy)? [[dx>0?1:-1,0],[0,dy>0?1:-1]] : [[0,dy>0?1:-1],[dx>0?1:-1,0]];
+        for(let d of dirs){
+            let nx=gx+d[0], ny=gy+d[1];
+            if(nx>=0&&ny>=0&&nx<GRID&&ny<GRID&&!isBlock(nx,ny)&&!isWall(nx,ny)){
+                ghost.gx=nx; ghost.gy=ny;
+                ghost.style.left=nx*TILE+"px"; ghost.style.top=ny*TILE+"px"; break;
+            }
+        }
+    },ghostSpeed);
+}
+
+document.addEventListener("keydown",e=>{
+    if(player1){ if(e.code==="ArrowLeft") move(player1,-1,0); if(e.code==="ArrowRight") move(player1,1,0); if(e.code==="ArrowUp") move(player1,0,-1); if(e.code==="ArrowDown") move(player1,0,1); if(e.code==="Space") placeBomb(player1); }
+    if(mode===2 && player2){ if(e.key==="q") move(player2,-1,0); if(e.key==="d") move(player2,1,0); if(e.key==="z") move(player2,0,-1); if(e.key==="s") move(player2,0,1); if(e.key==="a") placeBomb(player2); }
+});
+
+function checkLevel(){
+    if(mode!==1) return;
+    if(ghosts.length===0){ level++; if(level>10){showScreen("VICTOIRE");return;} bombRange=2+Math.floor(level/3); ghostSpeed=Math.max(300,500-level*20); startLevel(); }
+}
+
+board.addEventListener("click", e => {
+    if(mode!==1 || !selectedInventoryItem) return;
+    let rect=board.getBoundingClientRect();
+    let x=Math.floor((e.clientX-rect.left)/TILE);
+    let y=Math.floor((e.clientY-rect.top)/TILE);
+    if(isBlock(x,y) || isWall(x,y)) return;
+    let tile=document.createElement("div");
+    tile.className="tile"; tile.style.left=x*TILE+"px"; tile.style.top=y*TILE+"px";
+    tile.innerHTML='<img src="images et musiques/arbre.png">';
+    board.appendChild(tile);
+    blocks.push({x,y,el:tile,destructible:true,type:selectedInventoryItem});
+    inventory[selectedInventoryItem]--; if(inventory[selectedInventoryItem]===0) selectedInventoryItem=null;
+    renderInventory();
+});
+</script>
+</body>
+</html>

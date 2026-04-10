@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Survival Pingouin</title>
+
+<style>
+body{
+    margin:0;
+    overflow:hidden;
+    background:#87CEEB;
+    font-family:Arial;
+    text-align:center;
+}
+
+canvas{
+    display:block;
+    margin:auto;
+    background:#bfe9ff;
+    border-radius:20px;
+}
+
+#menu,#victory,#shop,#gameover{
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    background:white;
+    padding:30px;
+    border-radius:10px;
+}
+
+button{
+    padding:12px 26px;
+    font-size:18px;
+    font-weight:bold;
+    cursor:pointer;
+    border:none;
+    border-radius:12px;
+    background:linear-gradient(180deg,#ffd84d,#ffb300);
+    color:#333;
+    box-shadow:0 6px 0 #c98b00,0 8px 15px rgba(0,0,0,0.25);
+    transition:all 0.15s;
+}
+
+button:hover{
+    transform:translateY(-2px);
+}
+
+button:active{
+    transform:translateY(4px);
+    box-shadow:0 2px 0 #c98b00;
+}
+
+#shop{display:none;}
+
+#shopButton{
+    position:absolute;
+    top:20px;
+    right:20px;
+    padding:10px 18px;
+    font-size:18px;
+    background:#ffcc00;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    box-shadow:0 4px 0 #c99a00;
+}
+
+#shopButton:hover{
+    background:#ffd633;
+}
+
+/* Bouton skins hors boutique */
+#skinsButton{
+    position:absolute;
+    top:70px;
+    right:20px;
+    padding:10px 18px;
+    font-size:18px;
+    background:#ff99cc;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    box-shadow:0 4px 0 #cc6699;
+}
+
+#skinsButton:hover{
+    background:#ffb3d9;
+}
+
+/* Conteneur skins séparé */
+#skinsContainer{
+    display:none;
+    position:absolute;
+    top:50%;
+    left:50%;
+    transform:translate(-50%,-50%);
+    background:white;
+    padding:20px;
+    border-radius:10px;
+}
+
+#skinsContainer .skinItem{
+    display:inline-block;
+    margin:10px;
+    text-align:center;
+}
+
+#skinsContainer img{
+    width:60px;
+    cursor:pointer;
+    border:2px solid transparent;
+    transition: all 0.2s;
+}
+
+#skinsContainer img.selected{
+    border:2px solid green;
+}
+
+#skinsContainer img.locked{
+    opacity:0.5;
+    cursor:not-allowed;
+}
+
+#menuBtn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 8px 15px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(to right,#ff9800,#ffb74d);
+  color: white;
+  box-shadow: 0 0 10px #ff9800;
+  cursor: pointer;
+  z-index: 20;
+}
+
+#menuBtn:hover {
+  transform: scale(1.05);
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div id="menu">
+<h1>🐧 Survival Pingouin 🐧</h1>
+<p>Ramasse les étoiles et trouve la porte !</p>
+<button onclick="startGame()">Jouer</button>
+</div>
+
+<div id="victory" style="display:none">
+<h1>🏆 Victoire !</h1>
+<p id="finalScore"></p>
+
+<button onclick="location.reload()">Rejouer</button>
+
+<br><br>
+
+<button onclick="restartFromZero()">🔴 Recommencer depuis ZERO</button>
+
+<br><br>
+
+<button onclick="restartKeepSkins()">🟡 Recommencer mais garder les skins</button>
+
+</div>
+
+<div id="gameover" style="display:none">
+<h1>💀 Game Over</h1>
+<p>Le pingouin est tombé dans l'eau !</p>
+<button onclick="restartGame()">Rejouer</button>
+</div>
+
+<div id="shop">
+<h2>🛒 Boutique</h2>
+
+<p>⭐ Étoiles : <span id="shopStars">0</span></p>
+
+<p>⚡ Vitesse niveau : <span id="speedLvl">1</span>/5</p>
+<button onclick="buySpeed()">Améliorer vitesse (<span id="speedPrice">10</span>⭐)</button>
+
+<br><br>
+
+<p>🦘 Saut niveau : <span id="jumpLvl">1</span>/5</p>
+<button onclick="buyJump()">Améliorer saut (<span id="jumpPrice">10</span>⭐)</button>
+
+<br><br> <button onclick="closeShop()">Retour</button>
+
+</div>
+
+<button id="shopButton" onclick="openShop()">🛒 Boutique</button>
+<!-- Bouton skins hors boutique -->
+<button id="skinsButton" onclick="toggleSkins()">🎨 Skins</button>
+
+<!-- Conteneur skins séparé ajouté -->
+<div id="skinsContainer">
+  <div style="display:flex; justify-content:center; gap:20px; flex-wrap:wrap;">
+    <div class="skinItem">
+      <img id="skin1" src="images et musiques/pingouin.png" onclick="selectSkin(1)">
+      <p>Skin 1</p>
+    </div>
+    <div class="skinItem">
+      <img id="skin2" src="images et musiques/skinPingouin.png" onclick="selectSkin(2)">
+      <p>Skin 2 🔒</p>
+    </div>
+    <div class="skinItem">
+      <img id="skin3" src="images et musiques/skin2Pingouin.png" onclick="selectSkin(3)">
+      <p>Skin 3 🔒</p>
+    </div>
+    <div class="skinItem">
+      <img id="skin4" src="images et musiques/skin3Pingouin.png" onclick="selectSkin(4)">
+      <p>Skin 4 🔒</p>
+    </div>
+    <div class="skinItem">
+      <img id="skin5" src="images et musiques/skin4Pingouin.png" onclick="selectSkin(5)">
+      <p>Skin 5 🔒</p>
+    </div>
+    </div>
+    <div class="skinItem">
+      <img id="skin6" src="images et musiques/skin5Pingouin.png" onclick="selectSkin(6)">
+      <p>Skin 6 🔒</p>
+    </div>
+  <br>
+  <button onclick="toggleSkins()">Fermer</button>
+</div>
+
+<button onclick="goToMenu()" id="menuBtn">🏠 Menu</button>
+
+<canvas id="game" width="900" height="400"></canvas>
+
+<script>
+
+// ====== AJOUT minimal pour skins ======
+function toggleSkins(){
+    const container = document.getElementById("skinsContainer");
+    container.style.display = container.style.display === "none" ? "block" : "none";
+}
+// ====== FIN AJOUT skins ======
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+let keys = {};
+let cameraX = 0;
+let gameStarted = false;
+let levelIndex = 0;
+let totalStars = 0;
+let direction = 1;
+let walkAnim = 0;
+let moving = false;
+
+let penguin = {x:100,y:200,w:40,h:40,dy:0,jump:false};
+
+/* ===== AJOUT SAUVEGARDE ===== */
+function saveLevel(){ localStorage.setItem("penguinLevel", levelIndex); }
+function loadLevel(){ let saved = localStorage.getItem("penguinLevel"); if(saved!==null) levelIndex=parseInt(saved); }
+window.addEventListener("beforeunload", saveLevel);
+/* ============================ */
+
+/* boutique */
+let speedLevel = 1;
+let jumpLevel = 1;
+
+const maxSpeedLevel = 5;
+const maxJumpLevel = 5;
+
+let speedPrice = 10;
+let jumpPrice = 10;
+
+let speedBoost = 0;
+let jumpPower = -10;
+
+let currentSkin = 1; // Skin par défaut (1)
+let skins = {}; // Objet pour stocker les images des skins
+
+// Charger toutes les images des skins au démarrage
+function loadSkins() {
+    skins[1] = new Image();
+    skins[1].src = "images et musiques/pingouin.png";
+
+    skins[2] = new Image();
+    skins[2].src = "images et musiques/skinPingouin.png";
+
+    skins[3] = new Image();
+    skins[3].src = "images et musiques/skin2Pingouin.png";
+
+    skins[4] = new Image();
+    skins[4].src = "images et musiques/skin3Pingouin.png";
+
+    skins[5] = new Image();
+    skins[5].src = "images et musiques/skin4Pingouin.png";
+    skins[6] = new Image();
+    skins[6].src = "images et musiques/skin5Pingouin.png";
+}
+
+loadSkins(); // Charger les skins au démarrage
+
+function openShop(){
+    gameStarted=false;
+    document.getElementById("shop").style.display="block";
+    updateShop();
+    updateSkinsDisplay();
+}
+
+function goToMenu() {
+  window.location.href = "index.html";
+}
+
+function closeShop(){
+    document.getElementById("shop").style.display="none";
+    gameStarted=true;
+}
+
+function buySpeed(){
+    if(totalStars>=speedPrice && speedLevel<maxSpeedLevel){
+        totalStars-=speedPrice;
+        speedLevel++;
+        speedPrice*=2;
+        speedBoost=(speedLevel-1)*1.5;
+    }
+    updateShop();
+}
+
+function buyJump(){
+    if(totalStars>=jumpPrice && jumpLevel<maxJumpLevel){
+        totalStars-=jumpPrice;
+        jumpLevel++;
+        jumpPrice*=2;
+        jumpPower=-10-(jumpLevel-1)*2;
+    }
+    updateShop();
+}
+
+function updateShop(){
+    document.getElementById("shopStars").innerText=totalStars;
+    document.getElementById("speedLvl").innerText=speedLevel;
+    document.getElementById("jumpLvl").innerText=jumpLevel;
+    document.getElementById("speedPrice").innerText=speedPrice;
+    document.getElementById("jumpPrice").innerText=jumpPrice;
+}
+
+/* Skins */
+function toggleSkins(){
+    const container = document.getElementById("skinsContainer");
+    container.style.display = container.style.display === "none" ? "block" : "none";
+}
+
+function selectSkin(n){
+    const unlockLevels = [0,10,20,30,40,50]; // Niveaux où les skins sont déverrouillés
+    if(levelIndex >= unlockLevels[n-1]){
+        currentSkin = n; // Met à jour le skin sélectionné
+        updateSkinsDisplay();
+    }
+}
+
+function updateSkinsDisplay(){
+    for(let i=1;i<=6;i++){
+        const img = document.getElementById("skin"+i);
+        const p = img.nextElementSibling;
+        const unlockLevels = [0,10,20,30,40,50];
+        if(levelIndex >= unlockLevels[i-1]){
+            img.style.opacity = "1";
+            img.style.cursor = "pointer";
+            p.textContent = "Skin " + i;
+            if(currentSkin===i) img.style.border="2px solid green";
+            else img.style.border="2px solid transparent";
+        } else {
+            img.style.opacity = "0.5";
+            img.style.cursor = "not-allowed";
+            p.textContent = "Skin " + i + " 🔒";
+            img.style.border="2px solid transparent";
+        }
+    }
+}
+
+/* Input */
+document.addEventListener("keydown",e=>{
+    keys[e.code]=true;
+    if(e.code==="Space" && !penguin.jump){
+        penguin.dy=jumpPower;
+        penguin.jump=true;
+    }
+});
+
+document.addEventListener("keyup",e=>{
+    keys[e.code]=false;
+});
+
+/* niveaux */
+function generatePlayableLevels(){
+    let levels=[];
+    const maxJumpX=100;
+    const solY=270;
+
+    for(let i=0;i<60;i++){
+        let diff=i+1;
+        let length=900+diff*150;
+
+        let waterWidth=120+Math.random()*140+diff*8;
+        let waterX=200+Math.random()*(length-400);
+
+        let ground=[
+        {x:0,w:waterX},
+        {x:waterX+waterWidth,w:length-(waterX+waterWidth)}
+        ];
+
+        let water=[{x:waterX,w:waterWidth}];
+
+        let platforms=[];
+        let lastX=0;
+        let lastY=solY;
+
+        while(lastX<length-200){
+            let w=50+Math.random()*50;
+            let gap=50+Math.random()*(maxJumpX-50);
+            let nextY=lastY+(-80+Math.random()*160);
+            nextY=Math.max(150,Math.min(nextY,solY));
+            let nextX=lastX+gap;
+            platforms.push({x:nextX,y:nextY,w:w,h:15});
+            lastX=nextX+w;
+            lastY=nextY;
+        }
+
+        let stars=[];
+        platforms.forEach(p=>{
+            if(Math.random()<0.6){
+                stars.push({x:p.x+p.w/2,y:p.y-10,c:false});
+            }
+        });
+
+        let lastPlatform=platforms[platforms.length-1];
+        if(lastPlatform.y<solY-50) lastPlatform.y=solY-50;
+
+        let doorX=lastPlatform.x+lastPlatform.w/2-20;
+        let doorY=lastPlatform.y-50;
+        if(doorX+40>length-10) doorX=length-50;
+        if(doorY+50>solY) doorY=solY-50;
+        let door={x:doorX,y:doorY,w:40,h:50};
+
+        levels.push({
+            startWall:0,
+            endWall:length,
+            ground:ground,
+            water:water,
+            platforms:platforms,
+            stars:stars,
+            door:door
+        });
+    }
+
+    return levels;
+}
+
+let levels=generatePlayableLevels();
+
+/* jeu */
+function startGame(){
+    document.getElementById("menu").style.display="none";
+    gameStarted=true;
+}
+
+function resetLevel(){
+    penguin.x=100;
+    penguin.y=200;
+    penguin.dy=0;
+    penguin.jump=false;
+    keys["ArrowLeft"]=false;
+    keys["ArrowRight"]=false;
+    updateSkinsDisplay();
+}
+
+// 🔹 die() avec checkpoint tous les 5 niveaux
+function die(){
+    gameStarted=false;
+    document.getElementById("gameover").style.display="block";
+    // Checkpoint tous les 5 niveaux
+    levelIndex = Math.floor(levelIndex / 5) * 5;
+    resetLevel();
+}
+
+function restartGame(){
+    document.getElementById("gameover").style.display="none";
+    totalStars = 0;
+    speedLevel = 1;
+    jumpLevel = 1;
+    speedBoost = 0;
+    jumpPower = -10;
+    speedPrice = 10;
+    jumpPrice = 10;
+    resetLevel();
+    gameStarted=true;
+}
+
+function nextLevel(){
+    levelIndex++;
+    saveLevel();
+    if(levelIndex>=levels.length){
+        victory();
+        return;
+    }
+    resetLevel();
+}
+
+function victory(){
+    gameStarted=false;
+    document.getElementById("victory").style.display="block";
+    document.getElementById("finalScore").innerText="⭐ Étoiles : "+totalStars;
+}
+
+function update(){
+    if(!gameStarted) return;
+    let L=levels[levelIndex];
+    let speed=4+speedBoost;
+    moving=false;
+    if(keys["ArrowLeft"]){penguin.x-=speed; direction=-1; moving=true;}
+    if(keys["ArrowRight"]){penguin.x+=speed; direction=1; moving=true;}
+    if(moving) walkAnim+=0.2;
+    penguin.dy+=0.5;
+    penguin.y+=penguin.dy;
+
+    L.ground.forEach(g=>{
+        let gy=320;
+        if(penguin.x<g.x+g.w && penguin.x+penguin.w>g.x &&
+           penguin.y+penguin.h<gy+10 && penguin.y+penguin.h+penguin.dy>=gy){
+            penguin.dy=0;
+            penguin.y=gy-penguin.h;
+            penguin.jump=false;
+        }
+    });
+
+    L.platforms.forEach(p=>{
+        if(penguin.dy>=0){
+            let centerX=penguin.x+penguin.w/2;
+            if(centerX>p.x && centerX<p.x+p.w &&
+               penguin.y+penguin.h<p.y+10 && penguin.y+penguin.h+penguin.dy>=p.y){
+                penguin.dy=0;
+                penguin.y=p.y-penguin.h;
+                penguin.jump=false;
+            }
+        }
+    });
+
+    L.water.forEach(w=>{
+        if(penguin.x<w.x+w.w && penguin.x+penguin.w>w.x && penguin.y+penguin.h>320){
+            die();
+        }
+    });
+
+    L.stars.forEach(s=>{
+        if(!s.c && penguin.x<s.x+15 && penguin.x+penguin.w>s.x && penguin.y<s.y+15 && penguin.y+penguin.h>s.y){
+            s.c=true;
+            totalStars++;
+        }
+    });
+
+    let d=L.door;
+    if(penguin.x<d.x+d.w && penguin.x+penguin.w>d.x && penguin.y<d.y+d.h && penguin.y+penguin.h>d.y){
+        nextLevel();
+    }
+
+    cameraX=penguin.x-200;
+    if(cameraX<L.startWall) cameraX=L.startWall;
+    let maxCam=L.endWall-canvas.width;
+    if(cameraX>maxCam) cameraX=maxCam;
+}
+
+function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    if(!gameStarted) return;
+    let L=levels[levelIndex];
+    ctx.save();
+    ctx.translate(-cameraX,0);
+
+    L.ground.forEach(g=>{
+        ctx.fillStyle="#8B5A2B";
+        roundRect(ctx,g.x,320,g.w,80,10);
+        ctx.fillStyle="#3cb043";
+        roundRect(ctx,g.x,310,g.w,10,5);
+    });
+
+    L.water.forEach(w=>{
+        ctx.fillStyle="#2da6ff";
+        ctx.fillRect(w.x,320,w.w,80);
+    });
+
+    ctx.fillStyle="#654321";
+    L.platforms.forEach(p=>{roundRect(ctx,p.x,p.y,p.w,p.h,5);});
+
+    ctx.fillStyle="gold";
+    L.stars.forEach(s=>{if(!s.c){ctx.beginPath();ctx.arc(s.x,s.y,7,0,Math.PI*2); ctx.fill();}});
+
+    ctx.fillStyle="#663300";
+    roundRect(ctx,L.door.x,L.door.y,L.door.w,L.door.h,4);
+    ctx.fillStyle="yellow";
+    ctx.beginPath();
+    ctx.arc(L.door.x+30,L.door.y+25,3,0,Math.PI*2); ctx.fill();
+
+    drawPenguin();
+
+    ctx.restore();
+
+    ctx.fillStyle="black";
+    ctx.font="20px Arial";
+    ctx.fillText("Niveau : "+(levelIndex+1),20,30);
+    ctx.fillText("⭐ "+totalStars,20,60);
+}
+
+function drawPenguin(){
+    let tilt = 0;
+    if(moving) tilt = Math.sin(walkAnim) * 10;
+
+    ctx.save();
+    ctx.translate(penguin.x + penguin.w / 2, penguin.y + penguin.h / 2);
+    ctx.scale(direction, 1);    ctx.rotate(tilt * Math.PI / 180);
+
+    // Utilisation du skin sélectionné
+    ctx.drawImage(skins[currentSkin], -penguin.w / 2, -penguin.h / 2, penguin.w, penguin.h);
+
+    ctx.restore();
+}
+
+function roundRect(ctx,x,y,w,h,r,fill=true){
+    if(r>w/2) r=w/2;
+    if(r>h/2) r=h/2;
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.lineTo(x+w-r,y);
+    ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+    ctx.lineTo(x+w,y+h-r);
+    ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+    ctx.lineTo(x+r,y+h);
+    ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+    ctx.lineTo(x,y+r);
+    ctx.quadraticCurveTo(x,y,x+r,y);
+    ctx.closePath();
+    if(fill) ctx.fill();
+    else ctx.stroke();
+}
+
+function loop(){
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+
+loadLevel();
+resetLevel();
+loop();
+
+// 🔴 recommencer tout depuis ZERO
+function restartFromZero(){
+    localStorage.removeItem("penguinLevel");
+
+    levelIndex = 0;
+    totalStars = 0;
+
+    speedLevel = 1;
+    jumpLevel = 1;
+
+    speedBoost = 0;
+    jumpPower = -10;
+
+    speedPrice = 10;
+    jumpPrice = 10;
+
+    currentSkin = 1;
+
+    document.getElementById("victory").style.display="none";
+
+    resetLevel();
+    gameStarted = true;
+}
+
+// 🟡 recommencer mais garder les skins
+function restartKeepSkins(){
+    localStorage.removeItem("penguinLevel");
+
+    levelIndex = 0;
+    totalStars = 0;
+
+    speedLevel = 1;
+    jumpLevel = 1;
+
+    speedBoost = 0;
+    jumpPower = -10;
+
+    speedPrice = 10;
+    jumpPrice = 10;
+
+    // NE PAS réinitialiser le skin, on garde celui qui est sélectionné
+    // currentSkin = 1;  // Ne pas réinitialiser à 1 (cela permet de garder le skin actuel)
+
+    document.getElementById("victory").style.display="none";
+
+    resetLevel();
+    gameStarted = true;
+}
+</script>
+
+</body>
+</html>

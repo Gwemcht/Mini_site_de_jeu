@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Snake Ultimate</title>
+<style>
+/* ======= BODY ======= */
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    transition: background 0.3s, color 0.3s;
+}
+
+/* ======= CONTAINER ======= */
+#container {
+    text-align: center;
+    position: relative;
+}
+
+/* ======= CANVAS ======= */
+canvas {
+    border: 3px solid;
+    border-radius: 5px;
+    box-shadow: 0 0 20px #00ff9d;
+    transition: border-color 0.3s, box-shadow 0.3s, background 0.3s;
+}
+
+/* ======= SCREEN ======= */
+.screen {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    opacity: 0;
+    pointer-events: none;
+    transition: 0.4s;
+}
+
+.screen.show {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* ======= BUTTONS ======= */
+button {
+    padding: 12px 25px;
+    font-size: 18px;
+    margin: 8px;
+    cursor: pointer;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+button:hover {
+    transform: scale(1.1);
+}
+
+/* Theme Buttons */
+.btn-theme {
+    background: linear-gradient(to right,#ff9800,#ffb74d);
+    color: white;
+    box-shadow: 0 0 10px #ff9800;
+}
+
+/* Game Buttons */
+.btn-game {
+    background: linear-gradient(to right,#00ff9d,#00e6b8);
+    color: black;
+    box-shadow: 0 0 10px #00ff9d;
+}
+
+/* ======= SCORE ======= */
+#score {
+    font-size: 18px;
+    margin: 5px;
+}
+
+/* ======= MOBILE CONTROLS ======= */
+#controls {
+    display: none;
+    margin-top: 20px;
+}
+
+.btn {
+    width: 60px;
+    height: 60px;
+    background: #00ff9d;
+    border-radius: 15px;
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 30px;
+    margin: 5px;
+    cursor: pointer;
+}
+
+#menuBtn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 8px 15px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(to right,#ff9800,#ffb74d);
+  color: white;
+  box-shadow: 0 0 10px #ff9800;
+  cursor: pointer;
+  z-index: 20;
+}
+
+</style>
+</head>
+
+<body>
+
+<div id="container">
+    <canvas id="game" width="500" height="500"></canvas>
+    <div id="score">Score : 0 • High Score : 0</div>
+
+    <!-- MENU -->
+    <div id="menu" class="screen show">
+        <h1>🐍 SNAKE ULTIMATE 🐍</h1>
+        <button class="btn-game" onclick="startGame()">▶ Jouer</button><br>
+        <button class="btn-theme" onclick="toggleTheme()">🎨 Changer Thème</button>
+        <button class="btn-game" onclick="toggleMode()">♾ Mode : Normal</button>
+        <button class="btn-game" onclick="toggleObstacles()">🧱 Obstacles : OFF</button>
+        <button class="btn-game" onclick="togglePlayers()">🎮 Joueurs : 1</button>
+    </div>
+
+    <button onclick="goToMenu()" id="menuBtn">🏠 Menu</button>
+
+    <!-- GAME OVER -->
+    <div id="gameOver" class="screen">
+        <h1>💀 GAME OVER 💀</h1>
+        <p id="finalScore"></p>
+        <button class="btn-game" onclick="startGame()">🔄 Rejouer</button>
+        <button class="btn-game" onclick="backToMenu()">🏠 Menu</button>
+    </div>
+
+    <!-- MOBILE CONTROLS -->
+    <div id="controls">
+        <div><div class="btn" onclick="setDir(1, 'up')">⬆️</div></div>
+        <div>
+            <div class="btn" onclick="setDir(1, 'left')">⬅️</div>
+            <div class="btn" onclick="setDir(1, 'down')">⬇️</div>
+            <div class="btn" onclick="setDir(1, 'right')">➡️</div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ======== VARIABLES ========
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const scoreBox = document.getElementById("score");
+
+let box = 20;
+let snake = [], snake2 = [];
+let food, dx, dy, dx2, dy2;
+let score = 0;
+let highScore = localStorage.getItem("snakeHS") || 0;
+let loop;
+let theme = localStorage.getItem("theme") || "neon";
+let infinityMode = false;
+let obstaclesEnabled = false;
+let obstacles = [];
+let players = 1;
+
+// ======== SONS ========
+const sndEat = new Audio("https://assets.mixkit.co/active_storage/sfx/2572/2572-preview.mp3");
+const sndDeath = new Audio("https://assets.mixkit.co/active_storage/sfx/1116/1116-preview.mp3");
+const sndMove = new Audio("https://assets.mixkit.co/active_storage/sfx/2560/2560-preview.mp3");
+
+// ======== THÈMES ========
+function applyTheme() {
+    if (theme === "neon") {
+        document.body.style.background = "#000";
+        document.body.style.color = "white";
+        canvas.style.borderColor = "#00ff9d";
+        canvas.style.boxShadow = "0 0 30px #00ff9d";
+        canvas.style.background = "#0a0a0a";
+    }
+    else if (theme === "gameboy") {
+        document.body.style.background = "#234d20";
+        document.body.style.color = "#cde77f";
+        canvas.style.borderColor = "#8bc34a";
+        canvas.style.boxShadow = "0 0 10px #8bc34a";
+        canvas.style.background = "#9bbc0f";
+    }
+    else if (theme === "dark") {
+        document.body.style.background = "#121212";
+        document.body.style.color = "#eee";
+        canvas.style.borderColor = "#ff5555";
+        canvas.style.boxShadow = "0 0 20px #ff5555";
+        canvas.style.background = "#1f1f1f";
+    }
+}
+
+function toggleTheme() {
+    const themes = ["neon", "gameboy", "dark"];
+    theme = themes[(themes.indexOf(theme)+1)%themes.length];
+    localStorage.setItem("theme", theme);
+    applyTheme();
+    alert("Thème : " + theme);
+}
+
+// ======== FONCTIONS JEU ========
+function rnd(max) { return Math.floor(Math.random()*max); }
+
+function randomFood() { return { x: rnd(canvas.width/box)*box, y: rnd(canvas.height/box)*box }; }
+
+function startGame() {
+    document.getElementById("menu").classList.remove("show");
+    document.getElementById("gameOver").classList.remove("show");
+
+    score = 0;
+    snake = [{ x: 10*box, y: 10*box }];
+    dx = box; dy = 0;
+
+    if(players===2){ snake2=[{x:15*box,y:15*box}]; dx2=-box; dy2=0; }
+
+    food = randomFood();
+    obstacles = [];
+    if(obstaclesEnabled) generateObstacles();
+
+    scoreBox.textContent = `Score : ${score} • High Score : ${highScore}`;
+    clearInterval(loop);
+    loop = setInterval(update, 150);
+}
+
+// ======== OBSTACLES ========
+function generateObstacles(){
+    obstacles = [];
+    for(let i=0;i<10;i++){
+        obstacles.push({x:rnd(canvas.width/box)*box, y:rnd(canvas.height/box)*box});
+    }
+}
+
+function toggleObstacles(){ obstaclesEnabled=!obstaclesEnabled; alert("Obstacles : "+(obstaclesEnabled?"ON":"OFF")); }
+
+function togglePlayers(){ players=players===1?2:1; alert("Joueurs : "+players); }
+
+function toggleMode(){ infinityMode=!infinityMode; alert("Mode : "+(infinityMode?"Téléportation":"Normal")); }
+
+// ======== CONTROLES ========
+document.addEventListener("keydown", e=>{
+    if(e.key==="ArrowLeft" && dx!==box){ dx=-box; dy=0; play(sndMove);}
+    if(e.key==="ArrowRight" && dx!==-box){ dx=box; dy=0; play(sndMove);}
+    if(e.key==="ArrowUp" && dy!==box){ dx=0; dy=-box; play(sndMove);}
+    if(e.key==="ArrowDown" && dy!==-box){ dx=0; dy=box; play(sndMove);}
+
+    if(players===2){
+        if(e.key==="q" && dx2!==box){ dx2=-box; dy2=0; play(sndMove);}
+        if(e.key==="d" && dx2!==-box){ dx2=box; dy2=0; play(sndMove);}
+        if(e.key==="z" && dy2!==box){ dx2=0; dy2=-box; play(sndMove);}
+        if(e.key==="s" && dy2!==-box){ dx2=0; dy2=box; play(sndMove);}
+    }
+});
+
+// ======== SONS ========
+function play(sound){ sound.currentTime=0; sound.play(); }
+
+// ======== MOUVEMENT ET DESSIN ========
+function moveSnake(s,id){
+    let head={x:s[0].x+(id===1?dx:dx2), y:s[0].y+(id===1?dy:dy2)};
+
+    if(infinityMode){
+        if(head.x<0) head.x=canvas.width-box;
+        if(head.x>=canvas.width) head.x=0;
+        if(head.y<0) head.y=canvas.height-box;
+        if(head.y>=canvas.height) head.y=0;
+    }else{
+        if(head.x<0||head.x>=canvas.width||head.y<0||head.y>=canvas.height) return endGame();
+    }
+
+    for(let p of s){ if(head.x===p.x&&head.y===p.y) return endGame(); }
+
+    if(obstaclesEnabled){
+        for(let o of obstacles){ if(head.x===o.x&&head.y===o.y) return endGame(); }
+    }
+
+    if(players===2){
+        let other=id===1?snake2:snake;
+        for(let p of other){ if(head.x===p.x&&head.y===p.y) return endGame(); }
+    }
+
+    if(head.x===food.x&&head.y===food.y){
+        score++; play(sndEat); food=randomFood();
+        if(score>highScore){ highScore=score; localStorage.setItem("snakeHS",highScore);}
+    }else s.pop();
+
+    s.unshift(head);
+
+    const color=id===1?"#00ff9d":"#00aaff";
+    ctx.fillStyle=color;
+    s.forEach((p,i)=>{
+        ctx.fillRect(p.x,p.y,box,box);
+        if(i===0){ ctx.fillStyle="white"; ctx.fillRect(p.x+5,p.y+5,4,4); ctx.fillRect(p.x+11,p.y+5,4,4); ctx.fillStyle=color;}
+    });
+}
+
+function drawObstacles(){
+    ctx.fillStyle="#c402f5";
+    obstacles.forEach(o=>ctx.fillRect(o.x,o.y,box,box));
+}
+
+function update(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    if(obstaclesEnabled) drawObstacles();
+
+    ctx.fillStyle="red"; ctx.fillRect(food.x,food.y,box,box);
+
+    moveSnake(snake,1);
+    if(players===2) moveSnake(snake2,2);
+
+    scoreBox.textContent=`Score : ${score} • High Score : ${highScore}`;
+}
+
+function goToMenu() {
+  window.location.href = "index.html";
+}
+
+// ======== FIN ========
+function endGame(){
+    clearInterval(loop);
+    play(sndDeath);
+    document.getElementById("finalScore").textContent="Score final : "+score;
+    document.getElementById("gameOver").classList.add("show");
+}
+
+function backToMenu(){
+    document.getElementById("gameOver").classList.remove("show");
+    document.getElementById("menu").classList.add("show");
+}
+
+// ======== INIT ========
+applyTheme();
+</script>
+</body>
+</html>

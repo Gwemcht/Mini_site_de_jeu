@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Mega Menu</title>
+
+<style>
+body{
+    margin:0;
+    font-family: Arial, sans-serif;
+    background:black;
+    color:white;
+    overflow-x:hidden;
+    user-select:none;
+}
+
+h1{
+    margin-top:40px;
+    font-size:70px;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    gap:20px;
+    animation: fadeIn 1.3s ease;
+}
+
+h2{text-align:center;margin-top:10px;}
+
+@keyframes fadeIn{
+    from{opacity:0;transform:translateY(-20px);}
+    to{opacity:1;transform:translateY(0);}
+}
+
+.menu{
+    margin-top:30px;
+    display:flex;
+    justify-content:center;
+    gap:40px;
+    flex-wrap:wrap;
+}
+
+.card{
+    width:260px;
+    height:340px;
+    background:#222;
+    border-radius:20px;
+    padding:25px;
+    text-align:center;
+    cursor:pointer;
+    transition:0.25s;
+    box-shadow:0 0 15px rgba(0,0,0,0.6);
+    position:relative;
+    overflow:hidden;
+}
+
+.card:hover{
+    transform:scale(1.1) rotateZ(-1deg);
+    box-shadow:0 0 25px #00eaff;
+}
+
+.card::before{
+    content:"";
+    position:absolute;
+    inset:-50%;
+    background:conic-gradient(#00eaff,#0077ff,#00eaff);
+    animation:spin 3s linear infinite;
+    opacity:0;
+}
+
+.card:hover::before{opacity:0.4;}
+
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.card h2,.card-icon{position:relative;z-index:2;}
+.card-icon{font-size:80px;margin-top:10px;}
+.card h2{margin-top:110px;font-size:26px;}
+
+audio{display:none;}
+</style>
+</head>
+
+<body oncontextmenu="return false">
+
+<h1>🎮 Mega Menu</h1>
+<h2>Choisis ton jeu :</h2>
+
+<div class="menu">
+  <div class="card" data-link="kart.html"><div class="card-icon">🏎️</div><h2>Mini Mario Kart</h2></div>
+  <div class="card" data-link="logique.html"><div class="card-icon">🧠</div><h2>Jeu de logique</h2></div>
+  <div class="card" data-link="tank.html"><div class="card-icon">🚀</div><h2>Super Tank</h2></div>
+  <div class="card" data-link="cartoon.html"><div class="card-icon">🕹️</div><h2>Jeu Cartoon</h2></div>
+  <div class="card" data-link="moustiqueetclaquette.html"><div class="card-icon">🦟</div><h2>Moustique</h2></div>
+  <div class="card" data-link="flappybird.html"><div class="card-icon">🐤</div><h2>Flappy Bird</h2></div>
+  <div class="card" data-link="Jeudénigme.html"><div class="card-icon">🔍</div><h2>Énigme</h2></div>
+  <div class="card" data-link="Mayalabeille.html"><div class="card-icon">🐝</div><h2>Maya</h2></div>
+  <div class="card" data-link="Machineàsous.html"><div class="card-icon">🎰</div><h2>Machine à sous</h2></div>
+  <div class="card" data-link="snake.html"><div class="card-icon">🐍</div><h2>Snake</h2></div>
+  <div class="card" data-link="SpaceInvader.html"><div class="card-icon">👾</div><h2>Space Invader</h2></div>
+  <div class="card" data-link="Jeucaméraetmicro.html"><div class="card-icon">📸🎤</div><h2>Caméra & Micro</h2></div>
+  <div class="card" data-link="Attrap-Pommes.html"><div class="card-icon">🍎</div><h2>Attrape Pommes</h2></div>
+  <div class="card" data-link="jeudusaut.html"><div class="card-icon">🤸</div><h2>Jeu du saut</h2></div>
+  <div class="card" data-link="jeudepuzzle.html"><div class="card-icon">🧩</div><h2>Jeu du puzzle</h2></div>
+</div>
+
+<audio id="hoverSound" src="hover.mp3"></audio>
+
+<script>
+// ⛔ DATE LIMITE
+if(new Date() >= new Date("2026-03-12")){
+  document.body.innerHTML="<h1 style='text-align:center'>⛔ Accès expiré</h1>";
+  throw new Error("Bloqué");
+}
+
+// 🔊 SON
+const snd=document.getElementById("hoverSound");
+document.querySelectorAll(".card").forEach(c=>{
+  c.onmouseenter=()=>{snd.currentTime=0;snd.play();}
+});
+
+// 🔒 CODE SECRET
+const CODE_SECRET="le code est facile";
+const cards=[...document.querySelectorAll(".card")];
+cards.forEach(c=>c.onclick=null);
+
+// 🧱 OVERLAY
+const overlay=document.createElement("div");
+overlay.style.cssText=`
+position:fixed;inset:0;background:black;
+display:flex;flex-direction:column;
+align-items:center;justify-content:center;
+z-index:9999;color:white;text-align:center;
+`;
+overlay.innerHTML=`
+<h1>🔒 Accès sécurisé</h1>
+<p>Choisis une méthode :</p>
+<button id="btnCode">🔑 Code</button>
+<button id="btnVoice">🎤 Voix</button>
+<div id="zone"></div>
+`;
+document.body.prepend(overlay);
+
+overlay.querySelectorAll("button").forEach(b=>{
+  b.style.cssText=`
+    font-size:28px;padding:18px 45px;margin:15px;
+    border-radius:15px;border:none;cursor:pointer;
+    background:#00eaff;color:#000;
+  `;
+});
+
+// 🔑 CODE
+btnCode.onclick=()=>{
+  zone.innerHTML=`
+    <input id="codeInput" type="password" placeholder="Code secret"
+    style="font-size:22px;padding:10px;border-radius:8px;">
+    <button id="okCode">Valider</button>
+  `;
+  okCode.onclick=()=>{
+    if(codeInput.value===CODE_SECRET) unlock();
+    else alert("❌ Code incorrect");
+  };
+};
+
+// 🎤 VOIX
+btnVoice.onclick=()=>{
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR) return alert("❌ Non supporté");
+  const rec=new SR();
+  rec.lang="fr-FR";
+  rec.start();
+  rec.onresult=e=>{
+    const dit=e.results[0][0].transcript.toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+    dit.includes(CODE_SECRET)?unlock():alert("❌ Mauvaise phrase");
+  };
+};
+
+// ✅ DÉBLOCAGE
+function unlock(){
+  overlay.remove();
+  cards.forEach(c=>{
+    c.onclick=()=>location.href=c.dataset.link;
+  });
+}
+
+// 🔐 BLOQUE F12
+document.addEventListener("keydown",e=>{
+  if(e.key==="F12"||(e.ctrlKey&&e.shiftKey)) e.preventDefault();
+});
+</script>
+
+</body>
+</html>

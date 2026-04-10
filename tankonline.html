@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>🚀 Super Tank Deluxe PvP 🚀</title>
+<style>
+body{margin:0;background:black;overflow:hidden;font-family:Arial;color:white;text-align:center;}
+h1{margin:10px;}
+#hud{margin:5px;font-size:20px;display:none;background:rgba(0,0,0,0.7);padding:5px 10px;border-radius:8px;}
+#game{width:600px;height:400px;margin:auto;border:3px solid #5aa55a;position:relative;overflow:hidden;display:none;background:black;outline:none;}
+.tank{width:50px;height:50px;position:absolute;transform-origin:center center;}
+.tank img{width:100%;height:100%;object-fit:contain;pointer-events:none;}
+.bullet{width:8px;height:8px;border-radius:50%;position:absolute;background:cyan;box-shadow:0 0 6px cyan;}
+.bullet.other{background:magenta;box-shadow:0 0 6px magenta;}
+.obstacle{width:50px;height:50px;position:absolute;background:linear-gradient(145deg,#5a3921,#8b5a2b);border-radius:6px;}
+.star{position:absolute;width:2px;height:2px;background:white;border-radius:50%;}
+button{padding:10px 25px;font-size:18px;margin-top:20px;cursor:pointer;}
+:focus{outline:none;}
+#history{margin-top:10px;font-size:14px;}
+
+#menuBtn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 8px 15px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(to right,#ff9800,#ffb74d);
+  color: white;
+  box-shadow: 0 0 10px #ff9800;
+  cursor: pointer;
+  z-index: 20;
+}
+
+#menuBtn:hover {
+  transform: scale(1.05);
+}
+
+</style>
+</head>
+<body>
+<h1>🚀 Super Tank Deluxe PvP 🚀</h1>
+
+<div id="hud">
+  <span id="myLives">Mes vies : ❤️❤️❤️</span> |
+  <span id="otherLives">Vies adversaire : ❤️❤️❤️</span>
+</div>
+
+<div id="game" tabindex="0"></div>
+
+<div id="startScreen">
+  <h2>Bienvenue</h2>
+  <p>⬅️➡️⬆️⬇️ Bouger | Clic tirer</p>
+  <button id="createBtn">Créer une partie</button>
+  <p>Ton ID permanent : <span id="myId">---</span></p>
+  <p>Partie ID : <span id="sessionDisplay">---</span></p>
+  <input id="joinId" placeholder="ID de la partie">
+  <button id="joinBtn">Rejoindre</button>
+  <p id="status"></p>
+  <div id="history"><b>Historique des parties :</b><br><span id="historyList"></span></div>
+</div>
+
+<div id="endScreen" style="display:none;">
+  <h2 id="endMsg"></h2>
+  <button onclick="location.reload()">Rejouer</button>
+</div>
+
+<button onclick="goToMenu()" id="menuBtn">🏠 Menu</button>
+
+<audio id="shootSound" src="images et musiques/_fr_sound_tir-laser-1_ - Copie.mp3"></audio>
+<audio id="bgMusic" src="http://soundimage.org/wp-content/uploads/2014/10/Light-Years_v001.mp3" loop></audio>
+
+<script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+<script>
+const game=document.getElementById("game");
+const hud=document.getElementById("hud");
+const startScreen=document.getElementById("startScreen");
+const endScreen=document.getElementById("endScreen");
+const endMsg=document.getElementById("endMsg");
+const myLivesEl=document.getElementById("myLives");
+const otherLivesEl=document.getElementById("otherLives");
+const statusEl=document.getElementById("status");
+const sessionDisplay=document.getElementById("sessionDisplay");
+const shootSound=document.getElementById("shootSound");
+const bgMusic=document.getElementById("bgMusic");
+const historyList=document.getElementById("historyList");
+
+let keys={}, bullets=[], otherBullets=[], obstacles=[], stars=[];
+let myLives=3, otherLives=3, gameOver=false, gameLoop;
+let mouseX=300, mouseY=200;
+let starCount=80;
+let connected=false;
+
+// ------------------- ID Permanent -------------------
+let myStoredId = localStorage.getItem("myPeerId");
+if(!myStoredId){
+    const chars='ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let id='';
+    for(let i=0;i<9;i++) id+=chars.charAt(Math.floor(Math.random()*chars.length));
+    myStoredId=id;
+    localStorage.setItem("myPeerId", myStoredId);
+}
+document.getElementById("myId").textContent=myStoredId;
+
+// ------------------- Historique -------------------
+let history = JSON.parse(localStorage.getItem("history"))||[];
+function addToHistory(id){
+    if(!history.includes(id)){
+        history.unshift(id);
+        if(history.length>5) history.pop();
+        localStorage.setItem("history", JSON.stringify(history));
+        updateHistoryDisplay();
+    }
+}
+function updateHistoryDisplay(){
+    historyList.textContent = history.join(", ");
+}
+updateHistoryDisplay();
+
+// ------------------- Joueurs -------------------
+const player=document.createElement("div");
+player.className="tank";
+player.innerHTML="<img src='images et musiques/joueur tank.png'>";
+game.appendChild(player);
+
+const otherPlayer=document.createElement("div");
+otherPlayer.className="tank";
+otherPlayer.innerHTML="<img src='images et musiques/ennemi tank.png'>";
+game.appendChild(otherPlayer);
+
+// ------------------- INPUT -------------------
+document.addEventListener("keydown", e=>keys[e.key]=true);
+document.addEventListener("keyup", e=>keys[e.key]=false);
+game.addEventListener("mousemove", e=>{
+  const r=game.getBoundingClientRect();
+  mouseX=e.clientX-r.left;
+  mouseY=e.clientY-r.top;
+});
+
+// ------------------- MULTIPLAYER -------------------
+let peer=null, conn=null;
+let sessionId=null;
+
+function makeSessionId(){
+  return myStoredId; // ID complet permanent
+}
+
+function goToMenu() {
+  window.location.href = "index.html";
+}
+
+document.getElementById("createBtn").onclick=function(){
+    sessionId = makeSessionId();
+    sessionDisplay.textContent = sessionId;
+    addToHistory(sessionId);
+    peer = new Peer(sessionId);
+    peer.on("open", ()=>{
+        statusEl.textContent="En attente d'un joueur...";
+    });
+    peer.on("connection", c=>{
+        conn=c;
+        connected=true;
+        statusEl.textContent="Joueur connecté !";
+        conn.on("data", receiveData);
+        sendData({obstacles:obstacles.map(o=>({x:o.style.left,y:o.style.top}))});
+        startGame();
+    });
+    peer.on("error", err=>statusEl.textContent="Erreur: "+err);
+};
+
+document.getElementById("joinBtn").onclick=function(){
+    const joinId = document.getElementById("joinId").value;
+    if(!joinId) {statusEl.textContent="Veuillez entrer un ID de partie"; return;}
+    sessionId = joinId;
+    sessionDisplay.textContent = sessionId;
+    addToHistory(sessionId);
+    peer = new Peer(myStoredId);
+    peer.on("open", ()=>{
+        conn=peer.connect(sessionId);
+        conn.on("open", ()=>{
+            connected=true;
+            statusEl.textContent="Connecté !";
+            startGame();
+        });
+        conn.on("data", receiveData);
+    });
+    peer.on("error", err=>statusEl.textContent="Erreur: "+err);
+};
+
+// ------------------- ENVOI/RECEPTION -------------------
+function sendData(extra={}){
+    if(conn && conn.open){
+        conn.send(Object.assign({
+            x: player.style.left,
+            y: player.style.top,
+            bullets: bullets.map(b=>({x:b.style.left,y:b.style.top,vx:b.vx,vy:b.vy})),
+            lives: myLives
+        }, extra));
+    }
+}
+
+function receiveData(data){
+    if(data.obstacles){
+        obstacles.forEach(o=>o.remove());
+        obstacles=[];
+        data.obstacles.forEach(oData=>{
+            let o=document.createElement("div");
+            o.className="obstacle";
+            o.style.left=oData.x;
+            o.style.top=oData.y;
+            game.appendChild(o);
+            obstacles.push(o);
+        });
+    }
+    if(data.x && data.y){
+        otherPlayer.style.left = data.x;
+        otherPlayer.style.top = data.y;
+        otherLives = data.lives;
+        updateLivesDisplay();
+
+        otherBullets.forEach(b=>b.remove());
+        otherBullets=[];
+        data.bullets.forEach(bdata=>{
+            const b=document.createElement("div");
+            b.className="bullet other";
+            b.style.left=bdata.x;
+            b.style.top=bdata.y;
+            b.vx=bdata.vx; b.vy=bdata.vy;
+            game.appendChild(b);
+            otherBullets.push(b);
+        });
+    }
+}
+
+function updateLivesDisplay(){
+    myLivesEl.textContent="Mes vies : "+'❤️'.repeat(myLives);
+    otherLivesEl.textContent="Vies adversaire : "+'❤️'.repeat(otherLives);
+}
+
+// ------------------- JEU -------------------
+function createStars(){
+    stars=[];
+    for(let i=0;i<starCount;i++){
+        let s=document.createElement("div");
+        s.className="star";
+        s.style.left=Math.random()*600+"px";
+        s.style.top=Math.random()*400+"px";
+        s.dataset.speed=(Math.random()*1+0.2);
+        game.appendChild(s);
+        stars.push(s);
+    }
+}
+
+function initObstacles(){
+    obstacles.forEach(o=>o.remove());
+    obstacles=[];
+    const positions=[[100,100],[200,150],[300,200],[400,50],[500,300],[150,250]];
+    positions.forEach(p=>{
+        let o=document.createElement("div");
+        o.className="obstacle";
+        o.style.left=p[0]+"px";
+        o.style.top=p[1]+"px";
+        game.appendChild(o);
+        obstacles.push(o);
+    });
+}
+
+function shoot(){
+    if(gameOver) return;
+    const b=document.createElement("div");
+    b.className="bullet";
+    const x=parseInt(player.style.left)+25;
+    const y=parseInt(player.style.top)+25;
+    let dx=mouseX-x; let dy=mouseY-y; let dist=Math.hypot(dx,dy);
+    if(dist<1) dist=1;
+    b.vx=dx/dist*10; b.vy=dy/dist*10;
+    b.style.left=x+"px"; b.style.top=y+"px";
+    game.appendChild(b);
+    bullets.push(b);
+    shootSound.currentTime=0; shootSound.play().catch(()=>{});
+}
+game.addEventListener("click", shoot);
+
+function rect(el){return {x:parseInt(el.style.left),y:parseInt(el.style.top),w:el.offsetWidth,h:el.offsetHeight};}
+function coll(a,b){return a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y;}
+
+function loop(){
+    if(gameOver) return;
+
+    let l=parseInt(player.style.left), t=parseInt(player.style.top);
+    let oldL=l, oldT=t;
+    if(keys.ArrowLeft) l=Math.max(0,l-5);
+    if(keys.ArrowRight) l=Math.min(550,l+5);
+    if(keys.ArrowUp) t=Math.max(0,t-5);
+    if(keys.ArrowDown) t=Math.min(350,t+5);
+
+    for(let o of obstacles){if(coll({x:l,y:t,w:50,h:50},rect(o))){l=oldL;t=oldT;break;}}
+    player.style.left=l+"px"; player.style.top=t+"px";
+    const angle=Math.atan2(mouseY-(t+25),mouseX-(l+25))*180/Math.PI;
+    player.style.transform="rotate("+angle+"deg)";
+
+    bullets.forEach((b,i)=>{
+        b.style.left=parseFloat(b.style.left)+b.vx+"px";
+        b.style.top=parseFloat(b.style.top)+b.vy+"px";
+        for(let o of obstacles){if(coll(rect(b),rect(o))){b.remove(); bullets.splice(i,1); return;}}
+        if(coll(rect(b),rect(otherPlayer))){
+            b.remove(); bullets.splice(i,1);
+            otherLives--; if(otherLives<0) otherLives=0; checkVictory();
+        }
+        if(parseFloat(b.style.left)<0||parseFloat(b.style.left)>600||parseFloat(b.style.top)<0||parseFloat(b.style.top)>400){
+            b.remove(); bullets.splice(i,1);
+        }
+    });
+
+    otherBullets.forEach((b,i)=>{
+        b.style.left=parseFloat(b.style.left)+b.vx+"px";
+        b.style.top=parseFloat(b.style.top)+b.vy+"px";
+        for(let o of obstacles){if(coll(rect(b),rect(o))){b.remove(); otherBullets.splice(i,1); return;}}
+        if(coll(rect(b),rect(player))){
+            b.remove(); otherBullets.splice(i,1);
+            myLives--; if(myLives<0) myLives=0; checkVictory();
+        }
+        if(parseFloat(b.style.left)<0||parseFloat(b.style.left)>600||parseFloat(b.style.top)<0||parseFloat(b.style.top)>400){
+            b.remove(); otherBullets.splice(i,1);
+        }
+    });
+
+    stars.forEach(s=>{
+        let y=parseFloat(s.style.top)+parseFloat(s.dataset.speed);
+        if(y>400) y=0; s.style.top=y+"px";
+    });
+
+    sendData();
+}
+
+function checkVictory(){
+    if(myLives <=0){gameOver=true; endScreen.style.display="flex"; endMsg.textContent="💀 Vous avez perdu !";}
+    if(otherLives <=0){gameOver=true; endScreen.style.display="flex"; endMsg.textContent="🏆 Vous avez gagné !";}
+}
+
+// ------------------- START GAME -------------------
+function startGame(){
+    if(!connected) return;
+    startScreen.style.display="none";
+    game.style.display="block";
+    hud.style.display="block";
+    myLives=3; 
+    otherLives=3;
+    createStars();
+    initObstacles();
+
+    if(peer.id === sessionId){ 
+        player.style.left="50px"; player.style.top="350px";
+        otherPlayer.style.left="500px"; otherPlayer.style.top="50px";
+    } else {
+        player.style.left="500px"; player.style.top="50px";
+        otherPlayer.style.left="50px"; otherPlayer.style.top="350px";
+    }
+
+    bgMusic.currentTime=0; 
+    bgMusic.volume=0.3; 
+    bgMusic.play().catch(()=>{});
+    clearInterval(gameLoop); 
+    gameLoop=setInterval(loop,50);
+}
+</script>
+</body>
+</html>

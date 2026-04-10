@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Geometry Dash</title>
+
+<style>
+body{
+margin:0;
+min-height:100vh;
+display:flex;
+justify-content:center;
+align-items:center;
+background:linear-gradient(-45deg,#0044ff,#00fff7,#22ff00,#ffee00,#ff8800,#ff0055);
+background-size:400% 400%;
+animation: gradientMove 12s ease infinite;
+font-family:Segoe UI,Arial;
+color:white;
+overflow:hidden;
+}
+
+@keyframes gradientMove{
+0%{background-position:0% 50%;}
+50%{background-position:100% 50%;}
+100%{background-position:0% 50%;}
+}
+
+.game-container{
+background:rgba(0,0,0,0.25);
+backdrop-filter:blur(20px);
+border-radius:25px;
+padding:30px;
+width:900px;
+text-align:center;
+box-shadow:0 0 40px rgba(0,255,255,0.5);
+}
+
+button{
+padding:14px 32px;
+margin:8px;
+font-size:18px;
+border:none;
+border-radius:50px;
+cursor:pointer;
+background:linear-gradient(45deg,#00c6ff,#0072ff);
+color:white;
+font-weight:bold;
+}
+
+button.red{
+background:linear-gradient(45deg,#ff416c,#ff4b2b);
+}
+
+canvas{
+display:block;
+margin:15px auto 0;
+border-radius:12px;
+background:#120196;
+}
+
+#menu,#gameUI{display:none;}
+
+#menuBtn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 8px 15px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(to right,#ff9800,#ffb74d);
+  color: white;
+  box-shadow: 0 0 10px #ff9800;
+  cursor: pointer;
+  z-index: 20;
+}
+
+#menuBtn:hover {
+  transform: scale(1.05);
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="game-container">
+
+<div id="menu">
+<h1>⚡ Geometry Dash</h1>
+<p>Choisis ton niveau</p>
+<button onclick="launchGame(0)">🟢 Facile</button>
+<button class="red" onclick="launchGame(1)">🔴 Difficile</button>
+</div>
+
+<div id="gameUI">
+<button onclick="togglePause()">⏸ Pause</button>
+<button onclick="restart()">🔄 Rejouer</button>
+<button onclick="backMenu()">🏠 Accueil</button>
+<canvas id="game" width="800" height="300"></canvas>
+</div>
+
+<button onclick="goToMenu()" id="menuBtn">🏠 Menu</button>
+
+</div>
+
+<script>
+
+const canvas=document.getElementById("game");
+const ctx=canvas.getContext("2d");
+const menu=document.getElementById("menu");
+const gameUI=document.getElementById("gameUI");
+
+/* IMAGE */
+const playerImg=new Image();
+let imgLoaded=false;
+playerImg.src="images et musiques/nono.png";
+playerImg.onload=()=>imgLoaded=true;
+
+/* MUSIQUE */
+const music=new Audio("images et musiques/no batidao.mp3");
+music.loop=true;
+music.volume=0.4;
+
+/* VARIABLES */
+
+let bestScore=localStorage.getItem("bestScore")||0;
+let frame=0;
+let score=0;
+let paused=false;
+let gameOver=false;
+let currentLevel=0;
+
+let confettis=[];
+let particles=[];
+
+const levels=[
+{speed:4},
+{speed:6}
+];
+
+const player={
+x:80,
+y:220,
+size:32,
+vy:0,
+angle:0,
+jumps:2,
+dead:false
+};
+
+let obstacles=[];
+
+/* CONTROLES */
+
+canvas.addEventListener("mousedown",jump);
+
+window.addEventListener("keydown",e=>{
+if(e.code==="Space"){
+e.preventDefault();
+jump();
+}
+});
+
+function jump(){
+if(gameOver||paused||player.dead) return;
+
+if(player.jumps>0){
+player.vy=-14;
+player.jumps--;
+}
+}
+
+function goToMenu() {
+  window.location.href = "index.html";
+}
+
+/* MENU */
+
+function launchGame(lvl){
+currentLevel=lvl;
+menu.style.display="none";
+gameUI.style.display="block";
+reset();
+
+music.currentTime=0;
+music.play().catch(()=>{});
+}
+
+function backMenu(){
+gameUI.style.display="none";
+menu.style.display="block";
+music.pause();
+gameOver=true;
+}
+
+function restart(){
+reset();
+music.currentTime=0;
+music.play().catch(()=>{});
+}
+
+function togglePause(){
+paused=!paused;
+paused?music.pause():music.play().catch(()=>{});
+}
+
+function reset(){
+
+frame=0;
+score=0;
+
+obstacles=[];
+confettis=[];
+particles=[];
+
+paused=false;
+gameOver=false;
+
+Object.assign(player,{
+y:220,
+vy:0,
+angle:0,
+jumps:2,
+dead:false
+});
+}
+
+function currentSpeed(){
+return levels[currentLevel].speed+Math.floor(score/800);
+}
+
+/* CREATION OBSTACLE */
+
+function createObstacle(){
+
+let types=["ground"];
+
+if(score>600) types.push("moving");
+if(score>1200) types.push("double");
+if(score>2500) types.push("ground+ceiling");
+
+const type=types[Math.floor(Math.random()*types.length)];
+
+return{
+x:canvas.width,
+w:30,
+h:Math.random()*40+40,
+type:type,
+offset:0,
+dir:1
+};
+}
+
+/* UPDATE OBSTACLES */
+
+function updateObstacles(){
+
+if(
+obstacles.length===0 ||
+obstacles[obstacles.length-1].x < canvas.width-475
+){
+obstacles.push(createObstacle());
+}
+
+obstacles.forEach(o=>{
+
+o.x -= currentSpeed();
+
+if(o.type==="moving"){
+o.offset+=o.dir*0.6;
+if(Math.abs(o.offset)>20) o.dir*=-1;
+}
+
+if(!player.dead){
+
+const px=player.x;
+const py=player.y;
+const ps=player.size;
+
+if((o.type==="ground"||o.type==="moving") &&
+px+ps>o.x+4 &&
+px<o.x+o.w-4 &&
+py+ps>260-o.h+o.offset) death();
+
+if(o.type==="double" &&
+px+ps>o.x &&
+px<o.x+o.w &&
+(py+ps>260-o.h || py<o.h)) death();
+
+if(o.type==="ground+ceiling" &&
+px+ps>o.x &&
+px<o.x+o.w &&
+py<o.h) death();
+
+}
+
+});
+
+obstacles = obstacles.filter(o=>o.x+120>0);
+}
+
+/* DESSIN OBSTACLES */
+
+function drawObstacles(){
+
+ctx.fillStyle="#ff0044";
+
+obstacles.forEach(o=>{
+
+if(o.type==="ground"||o.type==="moving"||o.type==="double"){
+
+ctx.beginPath();
+ctx.moveTo(o.x,260);
+ctx.lineTo(o.x+o.w/2,260-o.h+o.offset);
+ctx.lineTo(o.x+o.w,260);
+ctx.fill();
+}
+
+if(o.type==="double"||o.type==="ground+ceiling"){
+
+ctx.beginPath();
+ctx.moveTo(o.x,0);
+ctx.lineTo(o.x+o.w/2,o.h);
+ctx.lineTo(o.x+o.w,0);
+ctx.fill();
+}
+
+});
+
+}
+
+/* PLAYER */
+
+function updatePlayer(){
+
+if(player.dead) return;
+
+player.vy+=0.9;
+player.y+=player.vy;
+
+if(player.y>=220){
+player.y=220;
+player.vy=0;
+player.jumps=2;
+player.angle=0;
+}
+else{
+player.angle+=0.2;
+}
+
+particles.push({
+x:player.x+16,
+y:player.y+player.size,
+size:Math.random()*4+2,
+life:10
+});
+}
+
+function drawPlayer(){
+
+if(player.dead) return;
+
+ctx.save();
+
+ctx.translate(player.x+16,player.y+16);
+ctx.rotate(player.angle);
+
+ctx.shadowColor="#00ffff";
+ctx.shadowBlur=25;
+
+if(imgLoaded)
+ctx.drawImage(playerImg,-16,-16,32,32);
+else
+ctx.fillRect(-16,-16,32,32);
+
+ctx.restore();
+
+ctx.shadowBlur=0;
+
+particles.forEach(p=>{
+
+ctx.fillStyle="rgba(0,255,255,"+p.life/30+")";
+
+ctx.beginPath();
+ctx.arc(p.x,p.y,p.size,0,Math.PI*2);
+ctx.fill();
+
+p.life--;
+
+});
+
+particles=particles.filter(p=>p.life>0);
+
+}
+
+/* MORT */
+
+function death(){
+
+player.dead=true;
+gameOver=true;
+
+music.pause();
+
+for(let i=0;i<30;i++){
+
+confettis.push({
+x:player.x+16,
+y:player.y+16,
+vx:(Math.random()-0.5)*6,
+vy:(Math.random()-0.5)*6,
+size:Math.random()*4+2,
+life:30
+});
+
+}
+
+}
+
+/* LOOP */
+
+function loop(){
+
+requestAnimationFrame(loop);
+
+ctx.fillStyle="rgba(18,1,150,0.6)";
+ctx.fillRect(0,0,800,300);
+
+ctx.fillStyle="#fff";
+ctx.fillRect(0,260,800,4);
+
+if(!paused && !gameOver){
+
+updatePlayer();
+updateObstacles();
+
+score++;
+frame++;
+
+}
+
+drawObstacles();
+drawPlayer();
+
+confettis.forEach(c=>{
+
+ctx.fillStyle="rgba(255,255,255,"+c.life/30+")";
+
+ctx.beginPath();
+ctx.arc(c.x,c.y,c.size,0,Math.PI*2);
+ctx.fill();
+
+c.x+=c.vx;
+c.y+=c.vy;
+
+c.life--;
+
+});
+
+confettis=confettis.filter(c=>c.life>0);
+
+ctx.fillStyle="#fff";
+ctx.font="16px Arial";
+
+ctx.fillText("Score : "+score,10,20);
+ctx.fillText("Best : "+bestScore,10,40);
+
+if(score>bestScore){
+bestScore=score;
+localStorage.setItem("bestScore",bestScore);
+}
+
+if(gameOver){
+ctx.font="28px Arial";
+ctx.fillText("GAME OVER",300,150);
+}
+
+if(paused){
+ctx.font="30px Arial";
+ctx.fillText("PAUSE",350,150);
+}
+
+}
+
+menu.style.display="block";
+
+loop();
+
+</script>
+</body>
+</html>

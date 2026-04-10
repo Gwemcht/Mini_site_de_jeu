@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recherche Automatique sur Google</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            text-align: center;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        input {
+            padding: 10px;
+            font-size: 16px;
+            width: 80%;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #status {
+            margin-top: 20px;
+            font-size: 16px;
+            color: green;
+        }
+
+        #menuBtn {
+            
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            padding: 8px 15px;
+            font-size: 16px;
+            border-radius: 8px;
+            border: none;
+            background: linear-gradient(to right,#ff9800,#ffb74d);
+            color: white;
+            box-shadow: 0 0 10px #ff9800;
+            cursor: pointer;
+            z-index: 20;
+                
+        }
+
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Recherche Automatique sur Google</h1>
+        <p>Entrez ce que vous voulez rechercher et appuyez sur le bouton.</p>
+        <input type="text" id="searchQuery" placeholder="Tapez votre recherche ici...">
+        <button onclick="startSearch()">Démarrer la recherche</button>
+        <p id="status">Ce programme effectue une recherche automatique sur Google toutes les millisecondes.</p>
+    </div>
+
+    <button onclick="goToMenu()" id="menuBtn">🏠 Menu</button>
+
+    <script>
+        let searchInterval;
+
+        function startSearch() {
+            // Récupérer la valeur du champ de recherche
+            const query = document.getElementById('searchQuery').value;
+
+            // Vérifier si l'utilisateur a bien entré une recherche
+            if (!query) {
+                alert('Veuillez entrer un terme de recherche.');
+                return;
+            }
+
+            // Afficher un message pour indiquer que la recherche a commencé
+            document.getElementById('status').textContent = 'Recherche commencée... Vous serez redirigé toutes les millisecondes.';
+
+            // Effectuer immédiatement la première recherche (au bout d'une seconde)
+            setTimeout(() => {
+                searchGoogle(query);
+            }, 0,1);  // Délai de 1 seconde (1000 millisecondes)
+
+            // Lancer la recherche toutes les secondes (1000 millisecondes)
+            searchInterval = setInterval(() => {
+                searchGoogle(query);
+            }, 0,1);  // 1 millisecondes
+        }
+
+        // Fonction pour effectuer la recherche Google
+        function searchGoogle(query) {
+            // Ouvre une nouvelle fenêtre avec la recherche sur Google
+            window.open('https://www.google.com/search?q=' + encodeURIComponent(query), '_blank');
+        }
+
+        function goToMenu() {
+          window.location.href = "index.html";
+      }
+
+    </script>
+
+</body>
+</html>

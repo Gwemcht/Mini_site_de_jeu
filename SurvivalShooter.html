@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Survival Shooter</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  height: 100vh;
+  background: radial-gradient(circle at 20% 20%, #0f0c29, #302b63, #24243e);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: 'Orbitron', sans-serif;
+  color: #fff;
+  overflow: hidden;
+}
+
+/* HOME */
+#home {
+  text-align: center;
+  animation: fadeIn 1s ease-in-out;
+}
+
+#home h1 {
+  font-size: 4rem;
+  color: cyan; /* fallback si background-clip non supporté */
+  background: linear-gradient(90deg, #00f0ff, #ff00f0);
+  
+  /* Compatibilité */
+  background-clip: text;          /* standard */
+  -webkit-background-clip: text;  /* Chrome, Safari */
+  -moz-background-clip: text;     /* ancien Firefox */
+  
+  -webkit-text-fill-color: transparent; /* WebKit */
+  color: transparent;                  /* fallback standard */
+  
+  text-shadow: 0 0 20px #00f0ff, 0 0 40px #ff00f0;
+  margin-bottom: 10px;
+}
+
+#home h2 {
+  font-size: 1.5rem;
+  margin-bottom: 50px;
+  color: #ccc;
+  text-shadow: 0 0 10px #00f0ff;
+}
+
+/* BUTTON */
+#startBtn {
+  font-size: 1.2rem;
+  padding: 18px 50px;
+  background: linear-gradient(45deg, #00f0ff, #ff00f0);
+  color: white;
+  border: none;
+  border-radius: 25px;
+  cursor: pointer;
+  box-shadow: 0 0 20px #00f0ff, 0 0 40px #ff00f0;
+  transition: all 0.3s ease;
+}
+
+#startBtn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 0 30px #00f0ff, 0 0 60px #ff00f0, 0 0 90px #ff00f0;
+}
+
+/* CANVAS */
+canvas {
+  display: none;
+  background: url('images et musiques/fond de ville.webp') no-repeat center center; /* image de fond uniquement pour le jeu */
+  background-size: cover;
+  border-radius: 20px;
+  border: 2px solid rgba(0,255,255,0.5);
+  box-shadow: 0 0 50px rgba(0,255,255,0.9), 0 0 80px rgba(255,0,255,0.6);
+}
+
+/* GAME OVER */
+#gameOverScreen {
+  display: none;
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, rgba(0,0,0,0.95), #0a0a0a);
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  text-align: center;
+  animation: fadeIn 1s ease-in-out;
+}
+
+#gameOverScreen h1 {
+  font-size: 5rem;
+  color: #ff0044;
+  text-shadow: 0 0 30px #ff0044, 0 0 60px #ff44aa;
+}
+
+#gameOverScreen p {
+  margin-top: 20px;
+  font-size: 1.5rem;
+  color: #fff;
+  opacity: 0.8;
+  text-shadow: 0 0 10px #fff;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+#menuBtn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 8px 15px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(to right,#ff9800,#ffb74d);
+  color: white;
+  box-shadow: 0 0 10px #ff9800;
+  cursor: pointer;
+  z-index: 20;
+}
+
+#menuBtn:hover {
+  transform: scale(1.05);
+}
+
+</style>
+</head>
+<body>
+
+<!-- PAGE ACCUEIL -->
+<div id="home">
+  <h1>SURVIVAL SHOOTER</h1>
+  <h2>Survis le plus longtemps possible.</h2>
+  <button id="startBtn">CLIQUER ICI POUR JOUER</button>
+</div>
+
+<!-- IMAGES -->
+<img id="playerImg" src="images et musiques/bandit.png" hidden>
+<img id="enemyImg" src="images et musiques/ennemie Survival Shooter.png" hidden>
+
+<!-- CANVAS -->
+<canvas id="game" width="900" height="550" tabindex="0"></canvas>
+
+<!-- GAME OVER -->
+<div id="gameOverScreen">
+  <h1>GAME OVER</h1>
+  <p>Retour à l'accueil dans <span id="countdown">5</span>…</p>
+</div>
+
+<button onclick="goToMenu()" id="menuBtn">🏠 Menu</button>
+
+<!-- SCRIPT -->
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const home = document.getElementById("home");
+    const startBtn = document.getElementById("startBtn");
+    const gameOverScreen = document.getElementById("gameOverScreen");
+    const countdownEl = document.getElementById("countdown");
+    const playerImg = document.getElementById("playerImg");
+    const enemyImg = document.getElementById("enemyImg");
+
+    let keys={}, bullets=[], enemies=[], particles=[];
+    let score=0, level=1, gameOver=false, countdownTimer=null;
+    let shootCooldown=300, lastShot=0;
+    let mouse={x:canvas.width/2, y:canvas.height/2};
+    const player={x:canvas.width/2,y:canvas.height/2,size:32,speed:4,hp:100,alive:true};
+
+    document.addEventListener("keydown",e=>keys[e.key]=true);
+    document.addEventListener("keyup",e=>keys[e.key]=false);
+    window.addEventListener("mousemove", e => {
+        const rect = canvas.getBoundingClientRect();
+        mouse.x = e.clientX - rect.left;
+        mouse.y = e.clientY - rect.top;
+    });
+    canvas.addEventListener("mousedown", shoot);
+    startBtn.addEventListener("click", startGame);
+
+    function startGame(){
+        bullets=[]; enemies=[]; particles=[]; score=0; level=1; gameOver=false;
+        player.hp=100; player.x=canvas.width/2; player.y=canvas.height/2; player.alive=true;
+        home.style.display="none";
+        gameOverScreen.style.display="none";
+        canvas.style.display="block";
+        canvas.focus();
+    }
+
+    function shoot(){if(Date.now()-lastShot<shootCooldown||gameOver) return; lastShot=Date.now();
+        const angle=Math.atan2(mouse.y-player.y,mouse.x-player.x);
+        bullets.push({x:player.x,y:player.y,vx:Math.cos(angle)*8,vy:Math.sin(angle)*8});
+        // aucun son
+    }
+
+    function spawnEnemy(){if(gameOver) return; enemies.push({x:Math.random()<0.5?0:canvas.width,y:Math.random()*canvas.height,size:22,speed:1.2+level*0.3,hp:level>3?2:1});}
+    setInterval(spawnEnemy,1200);
+
+    function update(){
+        if(gameOver) return;
+        level=Math.floor(score/10)+1;
+        if(player.alive){
+            if(keys["z"]||keys["ArrowUp"]) player.y-=player.speed;
+            if(keys["s"]||keys["ArrowDown"]) player.y+=player.speed;
+            if(keys["q"]||keys["ArrowLeft"]) player.x-=player.speed;
+            if(keys["d"]||keys["ArrowRight"]) player.x+=player.speed;
+        }
+        player.x=Math.max(0,Math.min(canvas.width,player.x));
+        player.y=Math.max(0,Math.min(canvas.height,player.y));
+
+        bullets.forEach(b=>{b.x+=b.vx; b.y+=b.vy;});
+        bullets=bullets.filter(b=>b.x>0&&b.x<canvas.width&&b.y>0&&b.y<canvas.height);
+
+        enemies.forEach(e=>{
+            const dx=player.x-e.x, dy=player.y-e.y, dist=Math.hypot(dx,dy);
+            e.x+=dx/dist*e.speed; e.y+=dy/dist*e.speed;
+            if(dist<player.size+e.size && player.alive){player.hp-=0.6; if(player.hp<=0) killPlayer();}
+        });
+
+        bullets.forEach((b,bi)=>{enemies.forEach((e,ei)=>{if(Math.hypot(b.x-e.x,b.y-e.y)<e.size){e.hp--; bullets.splice(bi,1); if(e.hp<=0){enemies.splice(ei,1); explode(e.x,e.y,20,"orange"); score++;}}})});
+
+        particles.forEach(p=>{p.x+=p.vx; p.y+=p.vy; p.rotation+=p.angularSpeed; p.life--;});
+        particles=particles.filter(p=>p.life>0);
+    }
+
+    function killPlayer(){player.alive=false; gameOver=true; explode(player.x,player.y,60,"red"); setTimeout(showGameOver,1200);}
+    function showGameOver(){
+        canvas.style.display="none";
+        gameOverScreen.style.display="flex";
+        let time=5; countdownEl.textContent=time;
+        countdownTimer=setInterval(()=>{time--; countdownEl.textContent=time; if(time<=0){clearInterval(countdownTimer); backToHome();}},1000);
+    }
+    function backToHome(){gameOverScreen.style.display="none"; home.style.display="block";}
+    function explode(x,y,count,color){for(let i=0;i<count;i++){particles.push({x,y,vx:(Math.random()-0.5)*6,vy:(Math.random()-0.5)*6,size:Math.random()*4+2,life:30+Math.random()*20,color,rotation:Math.random()*360,angularSpeed:(Math.random()-0.5)*0.2});}}
+    function draw(){
+        ctx.clearRect(0,0,canvas.width,canvas.height);
+        if(player.alive){ctx.save(); ctx.translate(player.x,player.y); ctx.rotate(Math.atan2(mouse.y-player.y,mouse.x-player.x)); ctx.drawImage(playerImg,-player.size,-player.size,player.size*2,player.size*2); ctx.restore();}
+        bullets.forEach(b=>{ctx.fillStyle="yellow"; ctx.beginPath(); ctx.arc(b.x,b.y,4,0,Math.PI*2); ctx.fill();});
+        enemies.forEach(e=>{ctx.drawImage(enemyImg,e.x-e.size,e.y-e.size,e.size*2,e.size*2);});
+        particles.forEach(p=>{ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.rotation); ctx.fillStyle=p.color; ctx.fillRect(-p.size/2,-p.size/2,p.size,p.size); ctx.restore();});
+        ctx.fillStyle="white"; ctx.fillText("Score : "+score,10,20); ctx.fillText("Niveau : "+level,10,40); ctx.fillText("Vie : "+Math.floor(player.hp),10,60);
+    }
+    function loop(){update(); draw(); requestAnimationFrame(loop);}
+    loop();
+});
+
+function goToMenu() {
+  window.location.href = "index.html";
+}
+
+</script>
+
+</body>
+</html>

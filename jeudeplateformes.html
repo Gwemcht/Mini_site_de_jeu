@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jeu de Plateformes - 20 Niveaux</title>
+    <style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  }
+
+body {
+font-family: Arial, sans-serif;
+display: flex;
+justify-content: center;
+align-items: center;
+min-height: 100vh;
+background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.game-container {
+position: relative;
+width: 800px;
+height: 600px;
+background: linear-gradient(180deg, #87ceeb 0%, #e0f6ff 100%);
+border: 3px solid #333;
+overflow: hidden;
+box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.player {
+position: absolute;
+width: 30px;
+height: 40px;
+background: #ff6b6b;
+border-radius: 5px;
+z-index: 10;
+}
+
+.player.invulnerable {
+animation: invulnerable-blink 0.3s infinite;
+}
+
+@keyframes invulnerable-blink {
+0%, 50% { opacity: 1; }
+51%, 100% { opacity: 0.5; }
+}
+
+.player::before {
+content: '';
+position: absolute;
+width: 8px;
+height: 8px;
+background: #000;
+border-radius: 50%;
+top: 10px;
+left: 6px;
+}
+
+.player::after {
+content: '';
+position: absolute;
+width: 8px;
+height: 8px;
+background: #000;
+border-radius: 50%;
+top: 10px;
+right: 6px;
+}
+
+/* 🔥 PLATEFORMES AVEC IMAGE PNG */
+.platform {
+    position: absolute;
+    background-image: url("images et musiques/plateforme.png"); /* ton PNG */
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    border-radius: 3px;
+}
+
+/* 🔥 Plateformes mobiles (même image + effet visuel) */
+.platform-moving {
+filter: hue-rotate(180deg) brightness(1.1);
+}
+
+.enemy {
+position: absolute;
+width: 30px;
+height: 30px;
+background: #ff9800;
+border-radius: 50%;
+z-index: 5;
+}
+
+.enemy::before {
+content: '';
+position: absolute;
+width: 6px;
+height: 6px;
+background: #000;
+border-radius: 50%;
+top: 8px;
+left: 5px;
+}
+
+.enemy::after {
+content: '';
+position: absolute;
+width: 6px;
+height: 6px;
+background: #000;
+border-radius: 50%;
+top: 8px;
+right: 5px;
+}
+
+.star {
+position: absolute;
+width: 30px;
+height: 30px;
+font-size: 24px;
+display: flex;
+align-items: center;
+justify-content: center;
+z-index: 4;
+animation: bounce 0.6s infinite;
+}
+
+@keyframes bounce {
+0%, 100% { transform: translateY(0); }
+50% { transform: translateY(-10px); }
+}
+
+.goal {
+position: absolute;
+width: 40px;
+height: 40px;
+background: #ff1744;
+border-radius: 50%;
+z-index: 4;
+box-shadow: 0 0 15px rgba(255, 23, 68, 0.8);
+animation: glow 1s infinite;
+}
+
+@keyframes glow {
+0%, 100% { box-shadow: 0 0 15px rgba(255, 23, 68, 0.8); }
+50% { box-shadow: 0 0 25px rgba(255, 23, 68, 1); }
+}
+
+.ui {
+position: absolute;
+top: 10px;
+left: 10px;
+color: #333;
+font-size: 18px;
+font-weight: bold;
+z-index: 20;
+background: rgba(255, 255, 255, 0.8);
+padding: 10px 15px;
+border-radius: 5px;
+}
+
+.stars-display {
+font-size: 24px;
+margin-top: 5px;
+}
+
+.invulnerability-timer {
+font-size: 14px;
+color: #ff6b6b;
+margin-top: 5px;
+}
+
+.game-over {
+position: absolute;
+width: 100%;
+height: 100%;
+background: rgba(0, 0, 0, 0.8);
+display: none;
+flex-direction: column;
+justify-content: center;
+align-items: center;
+z-index: 100;
+}
+
+.game-over-text {
+color: white;
+font-size: 48px;
+font-weight: bold;
+text-align: center;
+margin-bottom: 20px;
+}
+
+.stars-rating {
+font-size: 60px;
+margin: 20px 0;
+color: #FFD700;
+}
+
+.game-over-button {
+background: #4CAF50;
+color: white;
+border: none;
+padding: 15px 30px;
+font-size: 20px;
+border-radius: 5px;
+cursor: pointer;
+margin: 10px;
+}
+
+.game-over-button:hover {
+background: #45a049;
+}
+
+.instructions {
+position: absolute;
+bottom: 10px;
+left: 10px;
+color: #333;
+font-size: 12px;
+background: rgba(255, 255, 255, 0.8);
+padding: 8px 12px;
+border-radius: 5px;
+z-index: 20;
+}
+
+#menuBtn {
+position: absolute;
+top: 10px;
+left: 10px;
+padding: 8px 15px;
+font-size: 16px;
+border-radius: 8px;
+border: none;
+background: linear-gradient(to right,#ff9800,#ffb74d);
+color: white;
+box-shadow: 0 0 10px #ff9800;
+cursor: pointer;
+z-index: 20;
+}
+
+    </style>
+</head>
+<body>
+    <div class="game-container" id="gameContainer">
+        <div class="ui">
+            <div>Niveau: <span id="level">1</span>/20</div>
+            <div>Vies: <span id="lives">3</span></div>
+            <div class="stars-display">Étoiles: <span id="stars">☆☆☆☆☆</span></div>
+            <div class="invulnerability-timer" id="invulnTimer"></div>
+        </div>
+        <div class="instructions">
+            ← → Déplacer | ESPACE Sauter | Atteindre le cercle rouge ! | Collectez les étoiles !
+        </div>
+        <div class="game-over" id="gameOver">
+            <div class="game-over-text" id="gameOverText">Perdu!</div>
+            <div class="stars-rating" id="starsRating">⭐⭐⭐</div>
+            <div>
+                <button class="game-over-button" id="nextButton">Niveau Suivant</button>
+                <button class="game-over-button" onclick="location.reload()">Recommencer</button>
+            </div>
+        </div>
+    </div>
+
+    <button onclick="goToMenu()" id="menuBtn">🏠 Menu</button>
+
+    <script>
+        const gameContainer = document.getElementById('gameContainer');
+        const gameOverScreen = document.getElementById('gameOver');
+        const gameOverText = document.getElementById('gameOverText');
+        const starsDisplay = document.getElementById('stars');
+        const starsRating = document.getElementById('starsRating');
+        const levelDisplay = document.getElementById('level');
+        const livesDisplay = document.getElementById('lives');
+        const nextButton = document.getElementById('nextButton');
+        const invulnTimer = document.getElementById('invulnTimer');
+
+        let player = {
+            x: 50,
+            y: 100,
+            width: 30,
+            height: 40,
+            velocityX: 0,
+            velocityY: 0,
+            speed: 5,
+            jumpPower: 14,
+            grounded: false
+        };
+
+        let collectedStars = 0;
+        let lives = 3;
+        let currentLevel = 1;
+        let gameActive = true;
+        let invulnerable = false;
+        let invulnerableTime = 0;
+        const INVULNERABILITY_DURATION = 3000;
+        const gravity = 0.6;
+        const gameWidth = 800;
+        const gameHeight = 600;
+
+        const keys = {};
+
+        // Fonction pour générer les niveaux avec un chemin clair et étoiles sur chaque plateforme
+        function generateLevels() {
+            const levels = [];
+            
+            for (let level = 1; level <= 20; level++) {
+                const difficulty = (level - 1) / 19; // 0 à 1
+                
+                const platforms = [
+                    { x: 0, y: 550, width: 800, height: 50, moving: false, speed: 0, direction: 1, moveRange: 0 }
+                ];
+                
+                // Chemin vertical vers le haut - chaque plateforme est accessible depuis la précédente
+                let currentX = 100;
+                let currentY = 480;
+                
+                // Nombre de plateformes: 5-8 (moins la base = 5 étoiles max)
+                const platformCount = 6 + Math.floor(difficulty * 3);
+                
+                const platformPositions = [];
+                platformPositions.push({ x: 100, y: 480 }); // Première plateforme
+                
+                for (let i = 1; i < platformCount; i++) {
+                    const platformWidth = 120 + Math.random() * 40;
+                    
+                    // Alterner gauche/droite pour créer un chemin en zigzag
+                    if (i % 2 === 0) {
+                        currentX = 80 + Math.random() * 150; // Gauche
+                    } else {
+                        currentX = 500 + Math.random() * 200; // Droite
+                    }
+                    
+                    // Moins de plateforme mobile
+                    const moving = Math.random() < (0.15 + difficulty * 0.15);
+                    const speed = 0.7 + difficulty * 0.8; // Très lent
+                    const moveRange = currentX + 40;
+                    
+                    platforms.push({
+                        x: currentX,
+                        y: currentY,
+                        width: platformWidth,
+                        height: 20,
+                        moving: moving,
+                        speed: speed,
+                        direction: 1,
+                        moveRange: moveRange
+                    });
+                    
+                    platformPositions.push({ x: currentX, y: currentY });
+                    
+                    // Espacement vertical constant: 70px pour que les sauts soient possibles
+                    currentY -= 70;
+                }
+                
+                // Plateforme finale avant le but
+                platforms.push({
+                    x: 680,
+                    y: 90,
+                    width: 100,
+                    height: 20,
+                    moving: false,
+                    speed: 0,
+                    direction: 1,
+                    moveRange: 0
+                });
+                platformPositions.push({ x: 680, y: 90 });
+                
+                // Générer les étoiles : UNE sur chaque plateforme (sauf la base et la dernière)
+                const stars = [];
+                for (let i = 1; i < platformPositions.length - 1; i++) {
+                    const pos = platformPositions[i];
+                    const starX = pos.x + 50; // Centre de la plateforme
+                    const starY = pos.y - 40; // Au-dessus de la plateforme
+                    stars.push({
+                        x: starX,
+                        y: starY
+                    });
+                }
+                
+                // S'il manque des étoiles, en ajouter sur la dernière plateforme
+                while (stars.length < 5) {
+                    const lastPos = platformPositions[platformPositions.length - 1];
+                    stars.push({
+                        x: lastPos.x + 30 + (stars.length - (platformPositions.length - 2)) * 20,
+                        y: lastPos.y - 40
+                    });
+                }
+                
+                // Ennemis plus lents
+                const enemies = [];
+                const baseSpeed = 0.8 + difficulty * 0.8;
+                for (let i = 0; i < 3; i++) {
+                    enemies.push({
+                        y: 200 + i * 150,
+                        speed: baseSpeed + Math.random() * 0.2
+                    });
+                }
+                
+                levels.push({
+                    platforms: platforms,
+                    stars: stars.slice(0, 5),
+                    enemies: enemies,
+                    goal: { x: 730, y: 40, width: 40, height: 40 }
+                });
+            }
+            
+            return levels;
+        }
+
+        const levels = generateLevels();
+        let currentLevelData = levels[0];
+        let platforms = [];
+        let goal = { x: 0, y: 0, width: 40, height: 40 };
+        let enemies = [];
+        let stars = [];
+
+        document.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+            if (e.key === ' ') e.preventDefault();
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+
+        function loadLevel(levelIndex) {
+            if (levelIndex >= levels.length) {
+                gameActive = false;
+                gameOverText.textContent = 'Tous les 20 niveaux complétés! 🎉';
+                starsRating.textContent = '⭐⭐⭐⭐⭐';
+                nextButton.style.display = 'none';
+                gameOverScreen.style.display = 'flex';
+                return;
+            }
+
+            currentLevel = levelIndex + 1;
+            lives = 3;
+            collectedStars = 0;
+            invulnerable = true;
+            invulnerableTime = Date.now();
+            livesDisplay.textContent = lives;
+            levelDisplay.textContent = currentLevel + '/20';
+            updateStarsDisplay();
+            
+            currentLevelData = levels[levelIndex];
+            platforms = JSON.parse(JSON.stringify(currentLevelData.platforms));
+            goal = JSON.parse(JSON.stringify(currentLevelData.goal));
+            
+            player.x = 50;
+            player.y = 100;
+            player.velocityX = 0;
+            player.velocityY = 0;
+            player.grounded = false;
+
+            enemies = currentLevelData.enemies.map((enemyData, index) => ({
+                x: index === 1 ? gameWidth + 30 : -30,
+                y: enemyData.y,
+                width: 30,
+                height: 30,
+                speed: enemyData.speed,
+                direction: index === 1 ? -1 : 1
+            }));
+
+            stars = currentLevelData.stars.map(star => ({
+                x: star.x,
+                y: star.y,
+                width: 30,
+                height: 30,
+                collected: false
+            }));
+
+            clearLevel();
+            createPlatforms();
+            createEnemies();
+            createStars();
+            createGoal();
+            createPlayerElement();
+            gameActive = true;
+        }
+
+        function clearLevel() {
+            const elements = gameContainer.querySelectorAll('.platform, .enemy, .star, .goal, .player');
+            elements.forEach(el => el.remove());
+        }
+
+        function createPlatforms() {
+            platforms.forEach((platform, index) => {
+                const platformEl = document.createElement('div');
+                platformEl.className = 'platform' + (platform.moving ? ' platform-moving' : '');
+                platformEl.style.left = platform.x + 'px';
+                platformEl.style.top = platform.y + 'px';
+                platformEl.style.width = platform.width + 'px';
+                platformEl.style.height = platform.height + 'px';
+                gameContainer.appendChild(platformEl);
+            });
+        }
+
+        function createEnemies() {
+            enemies.forEach((enemy, index) => {
+                const enemyEl = document.createElement('div');
+                enemyEl.className = 'enemy';
+                enemyEl.id = 'enemy-' + index;
+                enemyEl.style.left = enemy.x + 'px';
+                enemyEl.style.top = enemy.y + 'px';
+                gameContainer.appendChild(enemyEl);
+            });
+        }
+
+        function createStars() {
+            stars.forEach((star, index) => {
+                const starEl = document.createElement('div');
+                starEl.className = 'star';
+                starEl.id = 'star-' + index;
+                starEl.textContent = '⭐';
+                starEl.style.left = star.x + 'px';
+                starEl.style.top = star.y + 'px';
+                gameContainer.appendChild(starEl);
+            });
+        }
+
+        function goToMenu() {
+            window.location.href = "index.html";
+      }
+
+        function createGoal() {
+            const goalEl = document.createElement('div');
+            goalEl.className = 'goal';
+            goalEl.id = 'goal-element';
+            goalEl.style.left = goal.x + 'px';
+            goalEl.style.top = goal.y + 'px';
+            goalEl.style.width = goal.width + 'px';
+            goalEl.style.height = goal.height + 'px';
+            gameContainer.appendChild(goalEl);
+        }
+
+        function createPlayerElement() {
+            const playerEl = document.createElement('div');
+            playerEl.className = 'player';
+            playerEl.id = 'player-element';
+            playerEl.style.left = player.x + 'px';
+            playerEl.style.top = player.y + 'px';
+            gameContainer.appendChild(playerEl);
+        }
+
+        function updateStarsDisplay() {
+            let display = '';
+            for (let i = 0; i < 5; i++) {
+                display += i < collectedStars ? '⭐' : '☆';
+            }
+            starsDisplay.textContent = display;
+        }
+
+        function updateInvulnerability() {
+            if (invulnerable) {
+                const elapsed = Date.now() - invulnerableTime;
+                const remaining = Math.ceil((INVULNERABILITY_DURATION - elapsed) / 1000);
+                
+                if (elapsed >= INVULNERABILITY_DURATION) {
+                    invulnerable = false;
+                    invulnTimer.textContent = '';
+                    const playerEl = document.getElementById('player-element');
+                    if (playerEl) {
+                        playerEl.classList.remove('invulnerable');
+                    }
+                } else {
+                    invulnTimer.textContent = `Invulnérable: ${remaining}s`;
+                    const playerEl = document.getElementById('player-element');
+                    if (playerEl) {
+                        playerEl.classList.add('invulnerable');
+                    }
+                }
+            }
+        }
+
+        function updatePlayer() {
+            if (keys['ArrowLeft'] || keys['a']) {
+                player.velocityX = -player.speed;
+            } else if (keys['ArrowRight'] || keys['d']) {
+                player.velocityX = player.speed;
+            } else {
+                player.velocityX = 0;
+            }
+
+            if ((keys[' '] || keys['ArrowUp'] || keys['w']) && player.grounded) {
+                player.velocityY = -player.jumpPower;
+                player.grounded = false;
+            }
+
+            player.velocityY += gravity;
+            player.x += player.velocityX;
+            player.y += player.velocityY;
+
+            if (player.x < 0) player.x = 0;
+            if (player.x + player.width > gameWidth) player.x = gameWidth - player.width;
+
+            player.grounded = false;
+
+            platforms.forEach(platform => {
+                if (isColliding(player, platform)) {
+                    if (player.velocityY > 0) {
+                        const playerBottom = player.y + player.height - Math.abs(player.velocityY);
+                        if (playerBottom <= platform.y + 10) {
+                            player.y = platform.y - player.height;
+                            player.velocityY = 0;
+                            player.grounded = true;
+                        }
+                    }
+                }
+            });
+
+            if (!invulnerable) {
+                enemies.forEach(enemy => {
+                    if (isColliding(player, enemy)) {
+                        loseLife();
+                    }
+                });
+            }
+
+            stars.forEach((star, index) => {
+                if (!star.collected && isColliding(player, star)) {
+                    star.collected = true;
+                    collectedStars++;
+                    updateStarsDisplay();
+                    const element = document.getElementById('star-' + index);
+                    if (element) element.remove();
+                }
+            });
+
+            if (isColliding(player, goal)) {
+                winLevel();
+            }
+
+            if (player.y > gameHeight) {
+                loseLife();
+            }
+
+            const playerEl = document.getElementById('player-element');
+            if (playerEl) {
+                playerEl.style.left = player.x + 'px';
+                playerEl.style.top = player.y + 'px';
+            }
+        }
+
+        function updatePlatforms() {
+            platforms.forEach((platform, index) => {
+                if (platform.moving) {
+                    platform.x += platform.speed * platform.direction;
+
+                    const minBound = platform.moveRange - 100;
+                    const maxBound = platform.moveRange + 100;
+
+                    if (platform.x <= minBound) {
+                        platform.direction = 1;
+                    } else if (platform.x + platform.width >= maxBound) {
+                        platform.direction = -1;
+                    }
+
+                    const platforms_elements = gameContainer.querySelectorAll('.platform');
+                    if (platforms_elements[index]) {
+                        platforms_elements[index].style.left = platform.x + 'px';
+                    }
+                }
+            });
+        }
+
+        function updateEnemies() {
+            enemies.forEach((enemy, index) => {
+                enemy.x += enemy.speed * enemy.direction;
+
+                if (enemy.x < -enemy.width) {
+                    enemy.x = gameWidth;
+                } else if (enemy.x > gameWidth) {
+                    enemy.x = -enemy.width;
+                }
+
+                const enemyEl = document.getElementById('enemy-' + index);
+                if (enemyEl) {
+                    enemyEl.style.left = enemy.x + 'px';
+                }
+            });
+        }
+
+        function isColliding(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width &&
+                   rect1.x + rect1.width > rect2.x &&
+                   rect1.y < rect2.y + rect2.height &&
+                   rect1.y + rect1.height > rect2.y;
+        }
+
+        function loseLife() {
+            lives--;
+            livesDisplay.textContent = lives;
+
+            if (lives <= 0) {
+                endGame();
+            } else {
+                resetPlayerPosition();
+            }
+        }
+
+        function resetPlayerPosition() {
+            player.x = 50;
+            player.y = 100;
+            player.velocityX = 0;
+            player.velocityY = 0;
+        }
+
+        function winLevel() {
+            gameActive = false;
+            gameOverText.textContent = 'Niveau ' + currentLevel + ' Complété!';
+            
+            let rating = Math.ceil((collectedStars / 5) * 5);
+            if (rating === 0) rating = 1;
+            
+            let starsText = '';
+            for (let i = 0; i < 5; i++) {
+                starsText += i < rating ? '⭐' : '☆';
+            }
+            starsRating.textContent = starsText;
+            
+            nextButton.textContent = currentLevel >= 20 ? 'Terminer' : 'Niveau Suivant';
+            nextButton.style.display = 'inline-block';
+            nextButton.onclick = () => {
+                gameOverScreen.style.display = 'none';
+                loadLevel(currentLevel);
+            };
+            gameOverScreen.style.display = 'flex';
+        }
+
+        function endGame() {
+            gameActive = false;
+            gameOverText.textContent = 'Niveau Échoué!';
+            
+            let rating = Math.ceil((collectedStars / 5) * 5);
+            if (rating === 0) rating = 1;
+            
+            let starsText = '';
+            for (let i = 0; i < 5; i++) {
+                starsText += i < rating ? '⭐' : '☆';
+            }
+            starsRating.textContent = starsText;
+            
+            nextButton.textContent = 'Réessayer';
+            nextButton.style.display = 'inline-block';
+            nextButton.onclick = () => {
+                gameOverScreen.style.display = 'none';
+                loadLevel(currentLevel - 1);
+            };
+            gameOverScreen.style.display = 'flex';
+        }
+
+        function gameLoop() {
+            if (gameActive) {
+                updateInvulnerability();
+                updatePlayer();
+                updatePlatforms();
+                updateEnemies();
+            }
+            requestAnimationFrame(gameLoop);
+        }
+
+        loadLevel(0);
+        gameLoop();
+    </script>
+</body>
+</html>
