@@ -8,6 +8,7 @@ v0.00.7 = modification du fichier readME.md
 v0.00.8 = ajout du jeu 3D
 v0.00.9 = modification de Jeu d'énigme
 v0.01.0 = ajout du jeu roue de la chance
+v0.01.1 = modification de jeu 3D
 
 
     lien de Mini site de jeu   : https://gwemcht.github.io/Mini_site_de_jeu/
