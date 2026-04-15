@@ -1,0 +1,430 @@
+```html
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Zelda Mini 3D - Map XXL</title>
+<style>
+html, body { margin:0; padding:0; height:100%; overflow:hidden; background:transparent; }
+canvas { display:block; }
+#info { position:absolute; top:10px; left:10px; color:white; font-family:Arial; font-size:20px; }
+
+#gameOver{
+  position:fixed;
+  top:0; left:0;
+  width:100%; height:100%;
+  background:rgba(0,0,0,0.85);
+  color:white;
+  display:none;
+  justify-content:center;
+  align-items:center;
+  flex-direction:column;
+  font-family:Arial;
+  z-index:10;
+}
+button{
+  padding:15px 30px;
+  font-size:20px;
+  cursor:pointer;
+}
+</style>
+</head>
+<body>
+
+<div id="info">❤️ Vies: 10</div>
+
+<div id="gameOver">
+  <h1 style="font-size:60px;">💀 GAME OVER</h1>
+  <button onclick="restartGame()">Rejouer</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/controls/OrbitControls.js"></script>
+
+<script>
+// SCENE
+const scene = new THREE.Scene();
+// scene.fog = new THREE.Fog(0x87CEEB, 200, 2000);
+
+// CAMERA
+const camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight, 0.1, 5000);
+camera.position.set(0,30,40);
+
+// RENDERER
+const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.setClearColor(0x000000, 0);
+document.body.appendChild(renderer.domElement);
+
+// CONTROLES
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.maxPolarAngle = Math.PI / 2.05;
+controls.minDistance = 5;
+controls.maxDistance = 200;
+
+// LUMIÈRE
+const light = new THREE.DirectionalLight(0xffffff,1);
+light.position.set(200,400,200);
+light.castShadow = true;
+scene.add(light);
+scene.add(new THREE.AmbientLight(0xffffff,0.25));
+
+// SOL
+const ground = new THREE.Mesh(
+  new THREE.PlaneGeometry(4000,4000),
+  new THREE.MeshStandardMaterial({ color:0x3cb043, roughness:0.9 })
+);
+ground.rotation.x = -Math.PI/2;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// JOUEUR
+const player = new THREE.Group();
+
+const body = new THREE.Mesh(
+  new THREE.CylinderGeometry(0.5,0.7,2,16),
+  new THREE.MeshStandardMaterial({ color:0x0077ff })
+);
+
+const head = new THREE.Mesh(
+  new THREE.SphereGeometry(0.5),
+  new THREE.MeshStandardMaterial({ color:0xffcc99 })
+);
+head.position.y = 1.5;
+
+player.add(body);
+player.add(head);
+
+// ÉPÉE
+const sword = new THREE.Group();
+
+const blade = new THREE.Mesh(
+  new THREE.BoxGeometry(0.1,1.5,0.2),
+  new THREE.MeshStandardMaterial({ color:0xdddddd, metalness:1 })
+);
+blade.position.y = 1;
+
+const guard = new THREE.Mesh(
+  new THREE.BoxGeometry(0.5,0.1,0.3),
+  new THREE.MeshStandardMaterial({ color:0x333 })
+);
+guard.position.y = 0.3;
+
+sword.add(blade);
+sword.add(guard);
+sword.position.set(0.8,0.5,0);
+
+player.add(sword);
+player.position.y = 1;
+scene.add(player);
+
+camera.lookAt(player.position);
+controls.target.copy(player.position);
+controls.update();
+
+// ARBRES
+const trees=[];
+for(let i=0;i<300;i++){
+  const t = new THREE.Group();
+
+  const trunk = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.2,0.3,2),
+    new THREE.MeshStandardMaterial({ color:0x8B4513 })
+  );
+
+  const leaves = new THREE.Mesh(
+    new THREE.SphereGeometry(1),
+    new THREE.MeshStandardMaterial({ color:0x0a5f0a })
+  );
+  leaves.position.y = 1.5;
+
+  t.add(trunk);
+  t.add(leaves);
+
+  t.position.set((Math.random()-0.5)*3000,1,(Math.random()-0.5)*3000);
+  scene.add(t);
+  trees.push(t);
+}
+
+// ROCHERS
+const rocks=[];
+for(let i=0;i<400;i++){
+  const geo = new THREE.DodecahedronGeometry(Math.random()*1.5+0.5);
+  const mat = new THREE.MeshStandardMaterial({ color:0x777777, flatShading:true });
+
+  const rock = new THREE.Mesh(geo, mat);
+  rock.scale.y = Math.random()*0.6 + 0.4;
+
+  rock.position.set((Math.random()-0.5)*3000,0.5,(Math.random()-0.5)*3000);
+
+  scene.add(rock);
+  rocks.push(rock);
+}
+
+// ENNEMIS
+const enemies=[];
+for(let i=0;i<30;i++){
+  const e = new THREE.Group();
+
+  const body = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.5,0.7,2,16),
+    new THREE.MeshStandardMaterial({ color:0xaa0000 })
+  );
+
+  const head = new THREE.Mesh(
+    new THREE.SphereGeometry(0.5),
+    new THREE.MeshStandardMaterial({ color:0xff4444 })
+  );
+  head.position.y = 1.5;
+
+  e.add(body);
+  e.add(head);
+
+  e.position.set((Math.random()-0.5)*1000,1,(Math.random()-0.5)*1000);
+  scene.add(e);
+  enemies.push(e);
+}
+
+// COLLISIONS
+const colliders = [];
+let castleDoor = null;
+
+// CHATEAU (SEULE MODIF ICI)
+function createCastle(x,z){
+  const g = new THREE.Group();
+  const stone = new THREE.MeshStandardMaterial({color:0x888888});
+  const wood = new THREE.MeshStandardMaterial({color:0x8b5a2b});
+  const size = 40;
+
+  function wall(w,h,d,px,pz){
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d),stone);
+    m.position.set(px,h/2,pz);
+    g.add(m);
+    colliders.push(m);
+  }
+
+  wall(size,10,2,0,-size/2);
+
+  // ✅ MUR AVANT AVEC TROU
+  const doorWidth = 8;
+
+  wall((size - doorWidth)/2,10,2,
+    -(doorWidth/2 + (size - doorWidth)/4),
+    size/2
+  );
+
+  wall((size - doorWidth)/2,10,2,
+    (doorWidth/2 + (size - doorWidth)/4),
+    size/2
+  );
+
+  wall(2,10,size,-size/2,0);
+  wall(2,10,size,size/2,0);
+
+  const corners=[
+    [size/2,size/2],
+    [-size/2,size/2],
+    [size/2,-size/2],
+    [-size/2,-size/2]
+  ];
+
+  corners.forEach(c=>{
+    const tower = new THREE.Mesh(
+      new THREE.CylinderGeometry(4,4,12,16),
+      stone
+    );
+
+    tower.position.set(c[0],6,c[1]);
+    g.add(tower);
+    colliders.push(tower);
+
+    const roof = new THREE.Mesh(
+      new THREE.ConeGeometry(5,6,16),
+      new THREE.MeshStandardMaterial({color:0x552200})
+    );
+
+    roof.position.set(c[0],14,c[1]);
+    g.add(roof);
+  });
+
+  const door = new THREE.Mesh(
+    new THREE.BoxGeometry(8,10,1),
+    wood
+  );
+
+  door.position.set(0,5,size/2+0.5);
+  g.add(door);
+
+  castleDoor = door;
+  colliders.push(door);
+
+  g.position.set(x,0,z);
+  scene.add(g);
+}
+
+createCastle(100,100);
+
+// ===== TOUT LE RESTE IDENTIQUE =====
+
+// UI
+let lives = 10;
+const ui = document.getElementById("info");
+const gameOverScreen = document.getElementById("gameOver");
+let isGameOver = false;
+
+// CLAVIER
+const keys={};
+addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);
+addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
+
+// COLLISION
+function collide(p,o){
+  const box = new THREE.Box3().setFromObject(o);
+  const playerBox = new THREE.Box3().setFromCenterAndSize(
+    p,
+    new THREE.Vector3(1.5,2,1.5)
+  );
+  return box.intersectsBox(playerBox);
+}
+
+let lastHit=0;
+
+// LOOP
+function animate(){
+  requestAnimationFrame(animate);
+  if(isGameOver) return;
+
+  let next = player.position.clone();
+
+  const forward = new THREE.Vector3();
+  camera.getWorldDirection(forward);
+  forward.y=0;
+  if (forward.length() === 0) forward.set(0,0,-1);
+  forward.normalize();
+
+  const right = new THREE.Vector3();
+  right.crossVectors(forward,new THREE.Vector3(0,1,0)).normalize();
+
+  let speed=0.8;
+
+  if(keys["z"]||keys["arrowup"]) next.add(forward.clone().multiplyScalar(speed));
+  if(keys["s"]||keys["arrowdown"]) next.add(forward.clone().multiplyScalar(-speed));
+  if(keys["q"]||keys["arrowleft"]) next.add(right.clone().multiplyScalar(-speed));
+  if(keys["d"]||keys["arrowright"]) next.add(right.clone().multiplyScalar(speed));
+
+  if(next.distanceTo(player.position)>0.01) player.lookAt(next);
+
+  // PORTE (inchangé)
+  if(castleDoor){
+    const doorPos = new THREE.Vector3();
+    castleDoor.getWorldPosition(doorPos);
+
+    const dist = player.position.distanceTo(doorPos);
+
+const index = colliders.indexOf(castleDoor);
+
+if(dist < 25){
+  // OUVRIR
+  if(castleDoor.position.y > -10){
+    castleDoor.position.y -= 0.7;
+  }
+
+  if(index > -1){
+    colliders.splice(index,1);
+  }
+
+}else{
+  // FERMER
+  if(castleDoor.position.y < 5){
+    castleDoor.position.y += 0.7;
+  }
+
+  if(index === -1){
+    colliders.push(castleDoor);
+  }
+}
+}
+
+
+
+  let blocked=false;
+  [...trees, ...rocks, ...enemies, ...colliders].forEach(o=>{
+    if(collide(next,o)) blocked=true;
+  });
+
+  if(!blocked) player.position.copy(next);
+
+  // attaque
+  if(keys[" "]){
+    sword.rotation.z = Math.sin(Date.now()*0.02)*2;
+    enemies.forEach(e=>{
+      if(player.position.distanceTo(e.position)<2){
+        e.position.set((Math.random()-0.5)*1000,1,(Math.random()-0.5)*1000);
+      }
+    });
+  } else sword.rotation.z=0;
+
+  // ennemis
+  enemies.forEach(e=>{
+    const dir = new THREE.Vector3().subVectors(player.position,e.position).normalize();
+    const nextE = e.position.clone().add(dir.multiplyScalar(0.1));
+
+    let enemyBlocked = false;
+    colliders.forEach(o=>{
+      if(collide(nextE, o)) enemyBlocked = true;
+    });
+
+    if(!enemyBlocked){
+      e.position.copy(nextE);
+    }
+
+    if(player.position.distanceTo(e.position)<1.5){
+      const now=Date.now();
+      if(now-lastHit>1000){
+        lives--;
+        ui.innerHTML="❤️ Vies: "+lives;
+        lastHit=now;
+
+        if(lives<=0){
+          isGameOver = true;
+          gameOverScreen.style.display="flex";
+        }
+      }
+    }
+  });
+
+  controls.target.lerp(player.position, 0.1);
+
+  if (camera.position.distanceTo(player.position) > 40) {
+    const dir = new THREE.Vector3()
+      .subVectors(camera.position, player.position)
+      .normalize();
+
+    camera.position.copy(player.position.clone().add(dir.multiplyScalar(40)));
+  }
+
+  controls.update();
+  renderer.render(scene,camera);
+}
+
+animate();
+
+// RESTART
+function restartGame(){
+  lives = 10;
+  isGameOver = false;
+  gameOverScreen.style.display="none";
+
+  player.position.set(0,1,0);
+
+  enemies.forEach(e=>{
+    e.position.set((Math.random()-0.5)*1000,1,(Math.random()-0.5)*1000);
+  });
+
+  ui.innerHTML="❤️ Vies: "+lives;
+}
+</script>
+</body>
+</html>
