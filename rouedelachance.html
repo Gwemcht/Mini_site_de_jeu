@@ -6,107 +6,49 @@
 
 <style>
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial;
+  font-family: Arial;
   text-align: center;
-  margin: 0;
-  padding: 30px;
-  background: #0b0b0f;
+  background: #05060a;
   color: white;
-  touch-action: manipulation;
-  overflow: hidden;
-}
-
-h1 {
-  font-weight: 600;
-  opacity: 0.9;
+  margin: 0;
+  padding: 20px;
 }
 
 .container {
   position: relative;
   width: 320px;
-  margin: 20px auto;
-  transition: transform 1.2s cubic-bezier(.2,.9,.2,1);
-}
-
-canvas {
-  border-radius: 50%;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  margin: 30px auto;
 }
 
 .pointer {
   position: absolute;
-  top: -6px;
+  top: -8px;
   left: 50%;
   transform: translateX(-50%);
   width: 0;
   height: 0;
-  border-left: 12px solid transparent;
-  border-right: 12px solid transparent;
-  border-bottom: 22px solid rgba(255,255,255,0.9);
+  border-left: 14px solid transparent;
+  border-right: 14px solid transparent;
+  border-top: 26px solid #ffffff; /* ✅ bon sens */
+  filter: drop-shadow(0 0 6px rgba(255,255,255,0.7));
 }
 
-/* 🌫️ overlay cinéma */
-#overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(75, 73, 73, 0.514);
-  pointer-events: none;
-  transition: 1s;
+canvas {
+  border-radius: 50%;
+  box-shadow: 0 20px 80px rgba(0,0,0,0.8);
 }
 
 input, button {
+  margin: 6px;
   padding: 10px;
-  margin: 5px;
-  font-size: 15px;
   border-radius: 10px;
   border: none;
 }
 
-input {
-  background: #1a1a22;
-  color: white;
-  width: 150px;
-}
-
 button {
-  background: #2c2c3a;
-  color: white;
-  font-weight: 500;
   cursor: pointer;
-}
-
-#result {
-  margin-top: 15px;
-  font-size: 22px;
-  font-weight: 500;
-  transition: transform 1s ease, opacity 1s ease;
-}
-
-#confetti {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-
-#menuBtn {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  padding: 8px 15px;
-  font-size: 16px;
-  border-radius: 8px;
-  border: none;
-  background: linear-gradient(to right,#ff9800,#ffb74d);
+  background: #222;
   color: white;
-  box-shadow: 0 0 10px #ff9800;
-  cursor: pointer;
-  z-index: 20;
 }
 
 </style>
@@ -114,7 +56,7 @@ button {
 
 <body>
 
-<h1>🎡 Roue de la chance</h1>
+<h1>🎰 Roue de la chance</h1>
 
 <div id="inputs">
   <input class="choice" placeholder="Choix 1">
@@ -126,43 +68,22 @@ button {
 <button onclick="addChoice()">Ajouter</button>
 <button onclick="spin()">Tourner</button>
 
-<div class="container" id="container">
+<div class="container">
   <div class="pointer"></div>
   <canvas id="wheel" width="300" height="300"></canvas>
 </div>
 
-<button onclick="goToMenu()" id="menuBtn">🏠 Menu</button>
-
-<div id="result">Résultat : -</div>
-
-<div id="overlay"></div>
-<canvas id="confetti"></canvas>
+<h2 id="result">Résultat : -</h2>
 
 <script>
 let angle = 0;
+let velocity = 0;
 let spinning = false;
-
-const container = document.getElementById("container");
-const overlay = document.getElementById("overlay");
-const resultEl = document.getElementById("result");
 
 const canvas = document.getElementById("wheel");
 const ctx = canvas.getContext("2d");
 
-const confettiCanvas = document.getElementById("confetti");
-const cctx = confettiCanvas.getContext("2d");
-
-confettiCanvas.width = window.innerWidth;
-confettiCanvas.height = window.innerHeight;
-
-/* 🧠 RNG */
-function secureRandom(max){
-  const a = new Uint32Array(1);
-  crypto.getRandomValues(a);
-  return a[0] % max;
-}
-
-/* 📥 inputs */
+/* 📥 choix */
 function getChoices(){
   return [...document.querySelectorAll(".choice")]
     .map(i => i.value.trim())
@@ -176,159 +97,89 @@ function addChoice(){
   document.getElementById("inputs").appendChild(i);
 }
 
-/* 🎡 roue */
+/* 🎨 draw */
 function draw(){
   const choices = getChoices();
   if(!choices.length) return;
 
-  const colors = ["#6b7280","#94a3b8","#cbd5e1","#e2e8f0","#f1f5f9"];
   const r = 140;
   const c = 150;
 
   ctx.clearRect(0,0,300,300);
 
   for(let i=0;i<choices.length;i++){
-    const start = (i*2*Math.PI)/choices.length + angle;
-    const end = ((i+1)*2*Math.PI)/choices.length + angle;
+    const start = i * 2*Math.PI / choices.length + angle;
+    const end = (i+1) * 2*Math.PI / choices.length + angle;
 
     ctx.beginPath();
     ctx.moveTo(c,c);
     ctx.arc(c,c,r,start,end);
-    ctx.fillStyle = colors[i%colors.length];
+    ctx.fillStyle = `hsl(${i*360/choices.length},70%,60%)`;
     ctx.fill();
 
     ctx.save();
     ctx.translate(c,c);
     ctx.rotate((start+end)/2);
-    ctx.fillStyle = "rgba(0,0,0,0.75)";
-    ctx.font = "13px -apple-system";
+    ctx.fillStyle = "#111";
     ctx.textAlign = "right";
-    ctx.fillText(choices[i], r-12, 4);
+    ctx.font = "14px Arial";
+    ctx.fillText(choices[i], r-10, 5);
     ctx.restore();
   }
 }
 
-function goToMenu() {
-  window.location.href = "index.html";
-}
-
-
-/* 💥 confettis */
-function confetti(){
-  const p = [];
-
-  for(let i=0;i<140;i++){
-    p.push({
-      x: window.innerWidth/2,
-      y: window.innerHeight/2,
-      vx:(Math.random()-0.5)*10,
-      vy:(Math.random()-0.5)*10,
-      life:120,
-      size:Math.random()*3+2,
-      color:`hsl(${Math.random()*360},70%,60%)`
-    });
-  }
-
-  function anim(){
-    cctx.clearRect(0,0,confettiCanvas.width,confettiCanvas.height);
-    draw();
-
-    p.forEach(e=>{
-      e.x += e.vx;
-      e.y += e.vy;
-      e.vy += 0.12;
-      e.life--;
-
-      cctx.fillStyle = e.color;
-      cctx.fillRect(e.x,e.y,e.size,e.size);
-    });
-
-    if(p.some(e=>e.life>0)){
-      requestAnimationFrame(anim);
-    }
-  }
-
-  anim();
-}
-
-/* 🎯 SPIN */
+/* 🎰 SPIN PHYSIQUE */
 function spin(){
   if(spinning) return;
 
   const choices = getChoices();
-  if(!choices.length){
-    alert("Ajoute des choix !");
+  if(choices.length < 2){
+    alert("Ajoute au moins 2 choix !");
     return;
   }
 
   spinning = true;
 
-  const total = choices.length;
-  const index = secureRandom(total);
-
-  const segment = (2*Math.PI)/total;
-  const pointerOffset = -Math.PI/2;
-  const randomTurns = 3 + Math.random()*6;
-
-  const target =
-    angle +
-    (Math.PI*2*randomTurns) +
-    (index*segment) +
-    pointerOffset;
-
-  const start = angle;
-  let t = 0;
-
-  /* 🎥 CINEMA ZOOM START */
-  overlay.style.background = "rgba(0,0,0,0.45)";
-  container.style.transform = "scale(1.15)";
-  resultEl.style.opacity = "0.6";
-
-  function ease(x){
-    return 1 - Math.pow(1 - x, 3);
-  }
+  velocity = 0.25 + Math.random()*0.25; // vitesse initiale
 
   function animate(){
-    t += 0.008;
-
-    if(t >= 1){
-      angle = target;
-      spinning = false;
-
-      const result = choices[index];
-
-      resultEl.innerText = "Résultat : " + result;
-
-      confetti();
-
-      /* 🎥 ZOOM FINAL CINEMA */
-      container.style.transform = "scale(1.35)";
-      resultEl.style.transform = "scale(1.2)";
-      resultEl.style.opacity = "1";
-
-      overlay.style.background = "rgba(0,0,0,0.65)";
-
-      setTimeout(()=>{
-        container.style.transform = "scale(1)";
-        resultEl.style.transform = "scale(1)";
-        overlay.style.background = "rgba(0,0,0,0)";
-      }, 1200);
-
-      return;
-    }
-
-    angle = start + (target - start) * ease(t);
+    velocity *= 0.985; // friction réaliste
+    angle += velocity;
 
     draw();
-    requestAnimationFrame(animate);
+
+    if(velocity > 0.002){
+      requestAnimationFrame(animate);
+    } else {
+      spinning = false;
+      finalize();
+    }
   }
 
   animate();
 }
 
-/* 📱 mobile */
-canvas.addEventListener("click",spin);
-canvas.addEventListener("touchstart",spin);
+/* 🎯 CALCUL RÉSULTAT RÉEL */
+function finalize(){
+  const choices = getChoices();
+  const total = choices.length;
+  const segment = (2*Math.PI)/total;
+
+  // position du pointeur (haut)
+  const pointerAngle = (3*Math.PI/2 - angle) % (2*Math.PI);
+
+  let index = Math.floor(pointerAngle / segment);
+
+  // sécurité modulo
+  index = (index + total) % total;
+
+  document.getElementById("result").innerText =
+    "Résultat : " + choices[index];
+}
+
+/* events */
+canvas.addEventListener("click", spin);
+canvas.addEventListener("touchstart", spin);
 
 draw();
 </script>
