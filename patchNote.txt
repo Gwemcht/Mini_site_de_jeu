@@ -11,5 +11,6 @@ v0.01.0 = ajout du jeu roue de la chance
 v0.01.1 = modification de jeu 3D
 v0.01.2 = modification roue de la chance
 v0.01.3 = modification logo mini site de jeu
+v0.01.4 = modification de index.html
 
-    lien de Mini site de jeu   : https://gwemcht.github.io/Mini_site_de_jeu/
+lien de Mini site de jeu   : https://gwemcht.github.io/Mini_site_de_jeu/
