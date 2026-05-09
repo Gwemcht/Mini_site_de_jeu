@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Tower War</title>
+
+<style>
+body{
+    margin:0;
+    background:#111;
+    color:white;
+    text-align:center;
+    font-family:Arial,sans-serif;
+}
+
+canvas{
+    background:#222;
+    margin-top:10px;
+    border:2px solid #333;
+    cursor:pointer;
+}
+
+#overlay{
+    position:absolute;
+    top:0;
+    left:0;
+    width:100%;
+    height:100%;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    background:rgba(0,0,0,0.8);
+}
+
+button{
+    padding:10px 20px;
+    font-size:18px;
+    cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Tower War</h1>
+<p>Cliquez sur votre tour(bleue) et en restant appuyer reliez-la à une tour ennemie(rouge) ou a une tour neutre(grise).</p>
+<p id="levelText">Niveau 1</p>
+
+<canvas id="game" width="700" height="450"></canvas>
+
+<div id="overlay">
+    <h2 id="overlayText"></h2>
+    <button onclick="restart()">🔄 Rejouer</button>
+</div>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const overlay = document.getElementById("overlay");
+const overlayText = document.getElementById("overlayText");
+const levelText = document.getElementById("levelText");
+
+// IMAGES
+const bg = new Image();
+bg.src = "images et musiques/herbe.png";
+
+const imgPlayer = new Image();
+imgPlayer.src = "images et musiques/tourjoueur.png";
+
+const imgEnemy = new Image();
+imgEnemy.src = "images et musiques/tourennemi.png";
+
+const imgNeutral = new Image();
+imgNeutral.src = "images et musiques/tour.png";
+
+const imgUnit = new Image();
+imgUnit.src = "images et musiques/soldat.png";
+
+let towers = [];
+let units = [];
+let links = [];
+
+let dragging = false;
+let startTower = null;
+
+let mouseX = 0;
+let mouseY = 0;
+
+let gameOver = false;
+let level = 1;
+let levelUp = false;
+
+// =======================
+// NIVEAUX
+// =======================
+function loadLevel(lvl){
+
+    towers = [];
+    units = [];
+    links = [];
+
+    gameOver = false;
+    levelUp = false;
+
+    levelText.textContent = "Niveau " + lvl;
+
+    if(lvl === 1){
+
+        towers = [
+            {x:100,y:225,units:40,owner:"player"},
+            {x:300,y:100,units:15,owner:"neutral"},
+            {x:300,y:350,units:15,owner:"neutral"},
+            {x:600,y:225,units:30,owner:"enemy"}
+        ];
+    }
+
+    else if(lvl === 2){
+
+        towers = [
+            {x:80,y:225,units:45,owner:"player"},
+            {x:250,y:80,units:20,owner:"neutral"},
+            {x:250,y:370,units:20,owner:"neutral"},
+            {x:500,y:120,units:35,owner:"enemy"},
+            {x:600,y:300,units:35,owner:"enemy"}
+        ];
+    }
+
+    else{
+
+        towers = [
+            {x:80,y:225,units:50,owner:"player"},
+            {x:220,y:80,units:20,owner:"neutral"},
+            {x:220,y:370,units:20,owner:"neutral"},
+            {x:400,y:225,units:25,owner:"neutral"},
+            {x:550,y:100,units:45,owner:"enemy"},
+            {x:650,y:350,units:45,owner:"enemy"}
+        ];
+    }
+}
+
+// =======================
+// UNITÉS
+// =======================
+class Unit{
+
+    constructor(from,to,owner){
+
+        this.x = from.x;
+        this.y = from.y;
+
+        this.to = to;
+        this.owner = owner;
+
+        this.speed = 2;
+    }
+
+    update(){
+
+        let dx = this.to.x - this.x;
+        let dy = this.to.y - this.y;
+
+        let dist = Math.sqrt(dx*dx + dy*dy);
+
+        this.x += dx / dist * this.speed;
+        this.y += dy / dist * this.speed;
+
+        if(dist < 6){
+
+            this.hit();
+            return true;
+        }
+
+        return false;
+    }
+
+    hit(){
+
+        // SI MEME ÉQUIPE
+        if(this.owner === this.to.owner){
+
+            // IMPORTANT :
+            // seule une tour du joueur
+            // peut augmenter une autre tour du joueur
+
+            if(this.owner === "player"){
+
+                this.to.units++;
+            }
+        }
+
+        // attaque
+        else{
+
+            this.to.units--;
+
+            if(this.to.units <= 0){
+
+                this.to.owner = this.owner;
+                this.to.units = 10;
+            }
+        }
+    }
+
+    draw(){
+
+        ctx.drawImage(
+            imgUnit,
+            this.x - 8,
+            this.y - 8,
+            16,
+            16
+        );
+    }
+}
+
+// =======================
+// ENVOI
+// =======================
+function sendNow(from,to){
+
+    if(from.units < 5) return;
+
+    let amount = Math.floor(from.units * 0.15);
+
+    for(let i=0;i<amount;i++){
+
+        units.push(
+            new Unit(from,to,from.owner)
+        );
+    }
+}
+
+// =======================
+// FLUX CONTINU
+// =======================
+setInterval(()=>{
+
+    links.forEach(l=>{
+
+        if(l.from.units > 5){
+
+            units.push(
+                new Unit(
+                    l.from,
+                    l.to,
+                    l.from.owner
+                )
+            );
+        }
+    });
+
+},300);
+
+// =======================
+// DISTANCE LIGNE
+// =======================
+function distanceToLine(px,py,x1,y1,x2,y2){
+
+    let A = px - x1;
+    let B = py - y1;
+
+    let C = x2 - x1;
+    let D = y2 - y1;
+
+    let dot = A*C + B*D;
+    let len = C*C + D*D;
+
+    let param = dot / len;
+
+    let xx,yy;
+
+    if(param < 0){
+
+        xx = x1;
+        yy = y1;
+    }
+
+    else if(param > 1){
+
+        xx = x2;
+        yy = y2;
+    }
+
+    else{
+
+        xx = x1 + param * C;
+        yy = y1 + param * D;
+    }
+
+    let dx = px - xx;
+    let dy = py - yy;
+
+    return Math.sqrt(dx*dx + dy*dy);
+}
+
+// =======================
+// SOURIS
+// =======================
+canvas.addEventListener("mousedown",(e)=>{
+
+    if(gameOver) return;
+
+    let rect = canvas.getBoundingClientRect();
+
+    let mx = e.clientX - rect.left;
+    let my = e.clientY - rect.top;
+
+    // couper ligne
+    for(let i=0;i<links.length;i++){
+
+        let l = links[i];
+
+        let d = distanceToLine(
+            mx,my,
+            l.from.x,l.from.y,
+            l.to.x,l.to.y
+        );
+
+        if(d < 6){
+
+            if(l.from.owner === "player"){
+
+                links.splice(i,1);
+            }
+
+            return;
+        }
+    }
+
+    // sélectionner tour
+    for(let t of towers){
+
+        if(
+            Math.hypot(mx-t.x,my-t.y) < 25 &&
+            t.owner === "player"
+        ){
+
+            dragging = true;
+            startTower = t;
+        }
+    }
+});
+
+// mouvement souris
+canvas.addEventListener("mousemove",(e)=>{
+
+    let rect = canvas.getBoundingClientRect();
+
+    mouseX = e.clientX - rect.left;
+    mouseY = e.clientY - rect.top;
+});
+
+// relâcher souris
+canvas.addEventListener("mouseup",(e)=>{
+
+    if(!dragging || gameOver) return;
+
+    let rect = canvas.getBoundingClientRect();
+
+    let mx = e.clientX - rect.left;
+    let my = e.clientY - rect.top;
+
+    for(let t of towers){
+
+        if(
+            Math.hypot(mx-t.x,my-t.y) < 25 &&
+            t !== startTower
+        ){
+
+            sendNow(startTower,t);
+
+            if(links.length < 8){
+
+                links.push({
+                    from:startTower,
+                    to:t
+                });
+            }
+        }
+    }
+
+    dragging = false;
+});
+
+// =======================
+// IA
+// =======================
+function ai(){
+
+    if(gameOver) return;
+
+    let enemies =
+        towers.filter(t=>t.owner==="enemy");
+
+    let targets =
+        towers.filter(t=>t.owner!=="enemy");
+
+    if(enemies.length && targets.length){
+
+        let from = enemies[0];
+        let to = targets[0];
+
+        if(from.units > 20){
+
+            links.push({
+                from,
+                to
+            });
+        }
+    }
+}
+
+setInterval(ai,4000);
+
+// =======================
+// WIN / LOSE
+// =======================
+function checkGame(){
+
+    let playerAlive =
+        towers.some(t=>t.owner==="player");
+
+    let enemyAlive =
+        towers.some(t=>t.owner==="enemy");
+
+    // défaite
+    if(!playerAlive){
+
+        gameOver = true;
+
+        overlay.style.display = "flex";
+        overlayText.textContent =
+            "💀 Game Over";
+    }
+
+    // victoire
+    if(
+        playerAlive &&
+        !enemyAlive &&
+        !levelUp
+    ){
+
+        levelUp = true;
+        gameOver = true;
+
+        overlay.style.display = "flex";
+        overlayText.textContent =
+            "🎉 Victoire !";
+
+        setTimeout(()=>{
+
+            level++;
+
+            overlay.style.display = "none";
+
+            loadLevel(level);
+
+            levelUp = false;
+
+        },1500);
+    }
+}
+
+// =======================
+// RESTART
+// =======================
+function restart(){
+
+    level = 1;
+
+    overlay.style.display = "none";
+
+    loadLevel(level);
+}
+
+// =======================
+// DRAW
+// =======================
+function update(){
+
+    ctx.clearRect(0,0,700,450);
+
+    // background
+    ctx.drawImage(bg,0,0,700,450);
+
+    // lignes
+    links.forEach(l=>{
+
+        ctx.strokeStyle =
+            l.from.owner==="player"
+            ? "cyan"
+            : "red";
+
+        ctx.lineWidth = 3;
+
+        ctx.beginPath();
+
+        ctx.moveTo(l.from.x,l.from.y);
+        ctx.lineTo(l.to.x,l.to.y);
+
+        ctx.stroke();
+    });
+
+    // ligne preview
+    if(dragging && startTower){
+
+        ctx.setLineDash([5,5]);
+
+        ctx.strokeStyle = "white";
+
+        ctx.beginPath();
+
+        ctx.moveTo(
+            startTower.x,
+            startTower.y
+        );
+
+        ctx.lineTo(mouseX,mouseY);
+
+        ctx.stroke();
+
+        ctx.setLineDash([]);
+    }
+
+    // tours
+    towers.forEach(t=>{
+
+        let img = imgNeutral;
+
+        if(t.owner==="player")
+            img = imgPlayer;
+
+        if(t.owner==="enemy")
+            img = imgEnemy;
+
+        ctx.drawImage(
+            img,
+            t.x-25,
+            t.y-25,
+            50,
+            50
+        );
+
+        // texte
+        ctx.fillStyle = "black";
+        ctx.font = "20px Arial";
+        ctx.textAlign = "center";
+
+        ctx.fillText(
+            Math.floor(t.units),
+            t.x,
+            t.y - 35
+        );
+    });
+
+    // unités
+    units = units.filter(
+        u => !u.update()
+    );
+
+    units.forEach(
+        u => u.draw()
+    );
+
+    checkGame();
+
+    requestAnimationFrame(update);
+}
+
+// START
+loadLevel(level);
+update();
+
+</script>
+
+</body>
+</html>
