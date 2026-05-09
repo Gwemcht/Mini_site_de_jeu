@@ -3,18 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <title>Mini site de jeu</title>
+
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
 <link rel="icon" type="image/png" href="images et musiques/LogoMinisitedejeu.png">
+
 <style>
 body{
     margin:0;
     font-family:'Poppins', sans-serif;
-    background:linear-gradient(135deg,#000,#000,#000);
+    background:#000;
     color:white;
     overflow-x:hidden;
 }
 
-/* ✅ CANVAS ASTEROIDES */
+/* ===== CANVAS ===== */
 #asteroids{
     position:fixed;
     top:0;
@@ -24,30 +26,41 @@ body{
     z-index:0;
 }
 
-/* CONTENU AU DESSUS */
-h1, h2, .menu{
+/* ===== TITRES ===== */
+h1,h2,.menu{
     position:relative;
     z-index:2;
 }
 
 h1{
     margin-top:40px;
-    font-size:60px;
-    letter-spacing:2px;
-    animation:fadeIn 1.3s ease;
+    animation:fadeIn 1.2s ease;
 }
 
 @keyframes fadeIn{
-    from{opacity:0; transform:translateY(-20px);}
-    to{opacity:1; transform:translateY(0);}
+    from{
+        opacity:0;
+        transform:translateY(-20px);
+    }
+    to{
+        opacity:1;
+        transform:translateY(0);
+    }
 }
 
+h2{
+    text-align:center;
+    margin-top:20px;
+}
+
+/* ===== MENU ===== */
 .menu{
     margin-top:30px;
     display:flex;
     justify-content:center;
     gap:40px;
     flex-wrap:wrap;
+    padding-bottom:120px;
 }
 
 .card{
@@ -65,7 +78,7 @@ h1{
 }
 
 .card:hover{
-    transform:scale(1.1) rotateZ(-1deg);
+    transform:scale(1.08);
     box-shadow:0 0 25px #00eaff;
 }
 
@@ -76,47 +89,156 @@ h1{
     left:-50%;
     width:200%;
     height:200%;
-    background:conic-gradient(from 0deg, #00eaff, #0077ff, #00eaff);
+    background:conic-gradient(from 0deg,#00eaff,#0077ff,#00eaff);
     animation:rotateNeon 3s linear infinite;
     opacity:0;
     transition:0.3s;
 }
 
-.card:hover::before{opacity:0.4;}
+.card:hover::before{
+    opacity:0.35;
+}
 
-@keyframes rotateNeon{to{transform:rotate(360deg);}}
+@keyframes rotateNeon{
+    to{
+        transform:rotate(360deg);
+    }
+}
 
 .card h2{
     margin-top:110px;
     font-size:26px;
-    z-index:10;
     position:relative;
+    z-index:2;
 }
 
 .card-icon{
     font-size:80px;
     margin-top:10px;
-    z-index:10;
     position:relative;
+    z-index:2;
 }
 
-audio{display:none;}
+/* ===== AUDIO ===== */
+audio{
+    display:none;
+}
+
+/* ===== BOUTON BUG ===== */
+#bugContainer{
+    position:fixed;
+    bottom:20px;
+    right:20px;
+    z-index:100;
+}
+
+#bugButton{
+    background:#ff0055;
+    border:none;
+    padding:15px 25px;
+    border-radius:12px;
+    cursor:pointer;
+    font-size:16px;
+    font-weight:bold;
+    color:white;
+    box-shadow:0 0 15px rgba(255,0,85,0.6);
+    transition:0.3s;
+}
+
+#bugButton:hover{
+    transform:scale(1.08);
+    box-shadow:0 0 25px rgba(255,0,85,0.9);
+}
+
+/* ===== POPUP ===== */
+#bugFormWrapper{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.85);
+    z-index:200;
+    justify-content:center;
+    align-items:center;
+}
+
+#bugForm{
+    background:#1f1f1f;
+    padding:30px;
+    border-radius:16px;
+    width:320px;
+    box-shadow:0 0 25px rgba(0,0,0,0.8);
+}
+
+#bugForm h3{
+    margin-top:0;
+    text-align:center;
+}
+
+#bugForm input,
+#bugForm textarea{
+    width:100%;
+    margin:10px 0;
+    padding:12px;
+    border:none;
+    border-radius:8px;
+    background:#333;
+    color:white;
+    box-sizing:border-box;
+}
+
+#bugForm textarea{
+    resize:none;
+}
+
+#bugForm button{
+    width:100%;
+    margin-top:10px;
+    padding:12px;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    font-weight:bold;
+    transition:0.3s;
+}
+
+#sendBug{
+    background:#ff0055;
+    color:white;
+}
+
+#sendBug:hover{
+    transform:scale(1.03);
+}
+
+#closeForm{
+    background:#444;
+    color:white;
+}
+
+#bugMessage{
+    text-align:center;
+    margin-top:10px;
+    font-size:14px;
+}
 </style>
 </head>
 
 <body>
 
-<!-- ✅ CANVAS -->
+<!-- ===== FOND ASTEROIDES ===== -->
 <canvas id="asteroids"></canvas>
 
-<h1 style="display:flex;align-items:center;justify-content:center;gap:20px;font-size:70px;">
-    <img src="images et musiques/LogoMinisitedejeu.png" style="width:100px;">
+<!-- ===== LOGO ===== -->
+<h1 style="display:flex;align-items:center;justify-content:center;">
+    <img src="images et musiques/LogoMinisitedejeu.png"
+         style="width:100px;">
 </h1>
 
 <h2>Choisis ton jeu :</h2>
 
+<!-- ===== JEUX ===== -->
 <div class="menu">
-
+  
     <div class="card" onclick="location.href='kart.html'">
         <div class="card-icon">🏎️</div>
         <h2>Mini Mario Kart</h2>
@@ -248,12 +370,78 @@ audio{display:none;}
         <div class="card-icon">🌍</div>
         <h2>Jeu 3D</h2>
     </div>
+    
+        <div class="card" onclick="location.href='jeudetours.html'">
+        <div class="card-icon">
+            <img src="images et musiques/tour.png"
+                 alt="Jeu de tours"
+                 style="width:90px;height:90px;object-fit:contain;">
+        </div>
+        <h2>Jeu de tours</h2>
+    </div>
 
 </div>
 
-<audio id="hoverSound" src="https://cdn.pixabay.com/download/audio/2021/08/04/audio_78dcca0e97.mp3"></audio>
+<!-- ===== SON ===== -->
+<audio id="hoverSound"
+src="https://cdn.pixabay.com/download/audio/2021/08/04/audio_78dcca0e97.mp3">
+</audio>
+
+<!-- ===== BOUTON BUG ===== -->
+<div id="bugContainer">
+    <button id="bugButton">Signaler un bug</button>
+</div>
+
+<!-- ===== FORMULAIRE ===== -->
+<div id="bugFormWrapper">
+
+<form id="bugForm">
+
+    <h3>Signaler un bug</h3>
+
+    <input
+        type="text"
+        name="name"
+        placeholder="Ton nom"
+        required
+    >
+
+    <input
+        type="email"
+        name="email"
+        placeholder="Ton email"
+        required
+    >
+
+    <textarea
+        name="message"
+        rows="5"
+        placeholder="Décris le bug..."
+        required
+    ></textarea>
+
+    <!-- CONFIG FORMSUBMIT -->
+    <input type="hidden" name="_captcha" value="false">
+    <input type="hidden" name="_template" value="table">
+    <input type="hidden" name="_subject" value="Nouveau bug signalé">
+    <input type="hidden" name="_autoresponse"
+           value="Merci pour ton signalement !">
+
+    <button id="sendBug" type="submit">
+        Envoyer
+    </button>
+
+    <button type="button" id="closeForm">
+        Fermer
+    </button>
+
+    <p id="bugMessage"></p>
+
+</form>
+</div>
 
 <script>
+
 /* ===== ASTEROIDES ===== */
 const canvas = document.getElementById("asteroids");
 const ctx = canvas.getContext("2d");
@@ -263,7 +451,8 @@ function resize(){
     canvas.height = window.innerHeight;
 }
 resize();
-window.addEventListener("resize",resize);
+
+window.addEventListener("resize", resize);
 
 let asteroids = [];
 
@@ -271,16 +460,19 @@ for(let i=0;i<120;i++){
     asteroids.push({
         x:Math.random()*canvas.width,
         y:Math.random()*canvas.height,
-        size:Math.random()*3+2,
-        speed:Math.random()*3+2
+        size:Math.random()*3+1,
+        speed:Math.random()*2+1
     });
 }
 
 function animate(){
+
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
     asteroids.forEach(a=>{
+
         ctx.fillStyle="white";
+
         ctx.beginPath();
         ctx.arc(a.x,a.y,a.size,0,Math.PI*2);
         ctx.fill();
@@ -288,8 +480,8 @@ function animate(){
         a.x -= a.speed;
         a.y += a.speed;
 
-        /* ✅ FIX DROITE */
         if(a.y > canvas.height || a.x < 0){
+
             if(Math.random() < 0.5){
                 a.x = Math.random()*canvas.width;
                 a.y = -10;
@@ -302,15 +494,87 @@ function animate(){
 
     requestAnimationFrame(animate);
 }
+
 animate();
 
 /* ===== SON HOVER ===== */
-const hoverSound=document.getElementById("hoverSound");
-document.querySelectorAll('.card').forEach(c=>{
-    c.addEventListener("mouseenter",()=>{
-        hoverSound.currentTime=0;
+const hoverSound = document.getElementById("hoverSound");
+
+document.querySelectorAll(".card").forEach(card=>{
+
+    card.addEventListener("mouseenter",()=>{
+
+        hoverSound.currentTime = 0;
         hoverSound.play();
+
     });
+
+});
+
+/* ===== BUG FORM ===== */
+const bugButton = document.getElementById("bugButton");
+const bugFormWrapper = document.getElementById("bugFormWrapper");
+const closeForm = document.getElementById("closeForm");
+const bugMessage = document.getElementById("bugMessage");
+const bugForm = document.getElementById("bugForm");
+
+/* OUVRIR */
+bugButton.addEventListener("click",()=>{
+    bugFormWrapper.style.display="flex";
+});
+
+/* FERMER */
+closeForm.addEventListener("click",()=>{
+    bugFormWrapper.style.display="none";
+    bugMessage.textContent="";
+});
+
+/* ENVOI */
+bugForm.addEventListener("submit", async (e)=>{
+
+    e.preventDefault();
+
+    bugMessage.style.color="white";
+    bugMessage.textContent="Envoi en cours...";
+
+    const formData = new FormData(bugForm);
+
+    try{
+
+        const response = await fetch(
+            "https://formsubmit.co/ajax/am.inacioroca@laposte.net",
+            {
+                method:"POST",
+                headers:{
+                    "Accept":"application/json"
+                },
+                body:formData
+            }
+        );
+
+        const data = await response.json();
+
+        if(data.success === "true" || response.ok){
+
+            bugMessage.style.color="lightgreen";
+            bugMessage.textContent="✅ Bug envoyé !";
+
+            bugForm.reset();
+
+        }else{
+
+            bugMessage.style.color="red";
+            bugMessage.textContent="❌ Erreur.";
+
+        }
+
+    }catch(error){
+
+        bugMessage.style.color="red";
+        bugMessage.textContent="❌ Erreur réseau.";
+
+    }
+
 });
 </script>
 
