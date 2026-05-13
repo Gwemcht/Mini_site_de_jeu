@@ -12,5 +12,7 @@ v0.01.1 = modification de jeu 3D
 v0.01.2 = modification roue de la chance
 v0.01.3 = modification logo mini site de jeu
 v0.01.4 = modification de index.html
+v0.01.5 = ajout du bouton signaler un bug dans index.html + ajout du jeu de tours
+v0.01.6 = ajout du QRcode
 
 lien de Mini site de jeu   : https://gwemcht.github.io/Mini_site_de_jeu/
