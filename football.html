@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Football IA</title>
+<link rel="icon" type="image/png" href="images et musiques/LogoMinisitedejeu.png">
+<style>
+body{
+    margin:0;
+    overflow:hidden;
+    background:#145a32;
+    font-family:Arial;
+}
+
+canvas{
+    display:block;
+    margin:auto;
+    background:#27ae60;
+    border:5px solid white;
+}
+
+#score{
+    position:absolute;
+    top:10px;
+    left:50%;
+    transform:translateX(-50%);
+    color:white;
+    font-size:32px;
+    font-weight:bold;
+}
+
+#menuBtn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 8px 15px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(to right,#ff9800,#ffb74d);
+  color: white;
+  box-shadow: 0 0 10px #ff9800;
+  cursor: pointer;
+  z-index: 20;
+}
+
+</style>
+</head>
+
+<body>
+
+<div id="score">Toi 0 - 0 Ennemi</div>
+<canvas id="game" width="1000" height="600"></canvas>
+
+<button onclick="goToMenu()" id="menuBtn">🏠 Menu</button>
+
+<script>
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const scoreText = document.getElementById("score");
+
+let playerScore = 0;
+let aiScore = 0;
+
+const goalTop = 220;
+const goalBottom = 380;
+
+const SPEED = 4;
+
+// ================= IMAGES =================
+
+const playerImg = new Image();
+playerImg.src = "images et musiques/joueurdefoot.png";
+
+const aiImg = new Image();
+aiImg.src = "images et musiques/ennemidefoot.png";
+
+const ballImg = new Image();
+ballImg.src = "images et musiques/ballondefoot.png";
+
+// ==========================================
+
+const player = {
+    x:150,
+    y:300,
+    r:22,
+    speed:SPEED
+};
+
+const ai = {
+    x:850,
+    y:300,
+    r:22,
+    speed:SPEED
+};
+
+const ball = {
+    x:500,
+    y:300,
+    r:12,
+    vx:2,
+    vy:1
+};
+
+const keys = {};
+
+document.addEventListener("keydown", e=>keys[e.key]=true);
+document.addEventListener("keyup", e=>keys[e.key]=false);
+
+function drawField(){
+
+    ctx.fillStyle="#27ae60";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    ctx.strokeStyle="white";
+    ctx.lineWidth=4;
+
+    ctx.beginPath();
+    ctx.moveTo(canvas.width/2,0);
+    ctx.lineTo(canvas.width/2,canvas.height);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(canvas.width/2,canvas.height/2,80,0,Math.PI*2);
+    ctx.stroke();
+
+    ctx.fillStyle="white";
+    ctx.fillRect(0,goalTop,20,goalBottom-goalTop);
+    ctx.fillRect(canvas.width-20,goalTop,20,goalBottom-goalTop);
+}
+
+// ===== DESSIN IMAGES =====
+
+function drawPlayer(p, img){
+
+    ctx.drawImage(
+        img,
+        p.x - p.r,
+        p.y - p.r,
+        p.r * 2,
+        p.r * 2
+    );
+}
+
+function drawBall(){
+
+    ctx.drawImage(
+        ballImg,
+        ball.x - ball.r,
+        ball.y - ball.r,
+        ball.r * 2,
+        ball.r * 2
+    );
+}
+
+function movePlayer(){
+
+    if(keys["ArrowUp"]) player.y -= player.speed;
+    if(keys["ArrowDown"]) player.y += player.speed;
+    if(keys["ArrowLeft"]) player.x -= player.speed;
+    if(keys["ArrowRight"]) player.x += player.speed;
+
+    keepInMap(player);
+}
+
+function moveAI(){
+
+    const dx = ball.x - ai.x;
+    const dy = ball.y - ai.y;
+
+    const dist = Math.sqrt(dx*dx + dy*dy);
+
+    let escapeX = 0;
+    let escapeY = 0;
+
+    const margin = 70;
+
+    if(ball.x < margin) escapeX = 3;
+    if(ball.x > canvas.width - margin) escapeX = -3;
+    if(ball.y < margin) escapeY = 3;
+    if(ball.y > canvas.height - margin) escapeY = -3;
+
+    if(dist > 1){
+        ai.x += (dx/dist)*ai.speed + escapeX;
+        ai.y += (dy/dist)*ai.speed + escapeY;
+    }
+
+    keepInMap(ai);
+}
+
+function keepInMap(p){
+
+    if(p.x < p.r) p.x = p.r;
+    if(p.x > canvas.width - p.r) p.x = canvas.width - p.r;
+
+    if(p.y < p.r) p.y = p.r;
+    if(p.y > canvas.height - p.r) p.y = canvas.height - p.r;
+}
+
+function hitBall(p){
+
+    const dx = ball.x - p.x;
+    const dy = ball.y - p.y;
+
+    const dist = Math.sqrt(dx*dx + dy*dy);
+
+    const min = p.r + ball.r;
+
+    if(dist < min){
+
+        const angle = Math.atan2(dy,dx);
+
+        const push = min - dist;
+
+        ball.x += Math.cos(angle)*push;
+        ball.y += Math.sin(angle)*push;
+
+        let power = 8;
+
+        let vx = Math.cos(angle);
+        let vy = Math.sin(angle);
+
+        if(p === ai){
+            vx -= 0.5;
+        }
+
+        ball.vx = vx * power;
+        ball.vy = vy * power;
+    }
+}
+
+function moveBall(){
+
+    ball.x += ball.vx;
+    ball.y += ball.vy;
+
+    ball.vx *= 0.98;
+    ball.vy *= 0.98;
+
+    if(ball.y < ball.r){
+        ball.y = ball.r;
+        ball.vy *= -1;
+    }
+
+    if(ball.y > canvas.height - ball.r){
+        ball.y = canvas.height - ball.r;
+        ball.vy *= -1;
+    }
+
+    // BUT GAUCHE
+    if(ball.x - ball.r <= 10){
+
+        if(ball.y > goalTop && ball.y < goalBottom){
+            aiScore++;
+            update();
+            reset();
+            return;
+        }
+
+        ball.x = ball.r + 10;
+        ball.vx *= -1;
+    }
+
+    // BUT DROIT
+    if(ball.x + ball.r >= canvas.width - 10){
+
+        if(ball.y > goalTop && ball.y < goalBottom){
+            playerScore++;
+            update();
+            reset();
+            return;
+        }
+
+        ball.x = canvas.width - ball.r - 10;
+        ball.vx *= -1;
+    }
+}
+
+function update(){
+    scoreText.innerText = `Toi ${playerScore} - ${aiScore} Ennemi`;
+}
+
+function reset(){
+
+    player.x = 150;
+    player.y = 300;
+
+    ai.x = 850;
+    ai.y = 300;
+
+    ball.x = 500;
+    ball.y = 300;
+
+    ball.vx = 2;
+    ball.vy = 1;
+}
+
+function goToMenu() {
+  window.location.href = "index.html";
+}
+
+function loop(){
+
+    drawField();
+
+    movePlayer();
+    moveAI();
+
+    hitBall(player);
+    hitBall(ai);
+
+    moveBall();
+
+    drawPlayer(player, playerImg);
+    drawPlayer(ai, aiImg);
+    drawBall();
+
+    requestAnimationFrame(loop);
+}
+
+loop();
+
+</script>
+
+</body>
+</html>

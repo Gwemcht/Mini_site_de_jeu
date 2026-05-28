@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Smart Train Rails Tycoon</title>
+<link rel="icon" type="image/png" href="images et musiques/LogoMinisitedejeu.png">
+<style>
+
+body{
+margin:0;
+font-family:Arial;
+background:#6c5ce7;
+overflow:hidden;
+}
+
+/* UI */
+#ui{
+position:absolute;
+top:10px;
+left:50%;
+transform:translateX(-50%);
+background:white;
+padding:10px;
+border-radius:15px;
+display:flex;
+align-items:center;
+gap:10px;
+z-index:10;
+box-shadow:0 5px 15px rgba(0,0,0,0.2);
+}
+
+button{
+border:none;
+padding:10px 15px;
+border-radius:10px;
+cursor:pointer;
+font-weight:bold;
+transition:0.2s;
+color:white;
+}
+
+button:hover{
+transform:scale(1.05);
+}
+
+#addCity{background:#2ecc71;}
+#connect{background:#f39c12;}
+#train{background:#3498db;}
+#clear{background:#e74c3c;}
+
+#money{
+font-size:20px;
+font-weight:bold;
+color:#2c3e50;
+margin-left:10px;
+}
+
+/* MAP */
+#map{
+width:100vw;
+height:100vh;
+position:relative;
+
+background:
+linear-gradient(#0000 39px, rgba(255,255,255,0.06) 40px),
+linear-gradient(90deg,#0000 39px, rgba(255,255,255,0.06) 40px);
+
+background-size:40px 40px;
+}
+
+/* CITY */
+.city{
+width:70px;
+height:70px;
+position:absolute;
+transform:translate(-50%,-50%);
+
+background-image:url("images et musiques/ville.png");
+background-size:contain;
+background-repeat:no-repeat;
+background-position:center;
+
+cursor:pointer;
+z-index:2;
+}
+
+.cityLabel{
+position:absolute;
+transform:translate(-50%,-150%);
+font-size:12px;
+font-weight:bold;
+color:white;
+text-shadow:0 0 5px black;
+pointer-events:none;
+}
+
+/* RAIL */
+.rail{
+position:absolute;
+height:10px;
+transform-origin:left center;
+pointer-events:none;
+z-index:1;
+}
+
+.rail::before,
+.rail::after{
+content:"";
+position:absolute;
+width:100%;
+height:3px;
+background:#2c3e50;
+border-radius:2px;
+}
+
+.rail::before{top:1px;}
+.rail::after{bottom:1px;}
+
+.rail span{
+position:absolute;
+width:100%;
+height:10px;
+background:
+repeating-linear-gradient(
+90deg,
+transparent 0px,
+transparent 8px,
+#2c3e50 8px,
+#2c3e50 12px
+);
+opacity:0.8;
+}
+
+/* TRAIN */
+.train{
+width:50px;
+height:50px;
+position:absolute;
+
+background-image:url("images et musiques/train.png");
+background-size:contain;
+background-repeat:no-repeat;
+background-position:center;
+
+pointer-events:none;
+z-index:5;
+}
+
+#menuBtn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 8px 15px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(to right,#ff9800,#ffb74d);
+  color: white;
+  box-shadow: 0 0 10px #ff9800;
+  cursor: pointer;
+  z-index: 20;
+}
+
+</style>
+</head>
+
+<body>
+
+<button onclick="goToMenu()" id="menuBtn">🏠 Menu</button>
+
+<div id="ui">
+<button id="addCity"> Ville (200$)</button>
+<button id="connect"> Rail (100$)</button>
+<button id="train"> Train (300$)</button>
+<button id="clear">🧹 Reset</button>
+
+<div id="money">💰 1000$</div>
+</div>
+
+<div id="map"></div>
+
+<script>
+
+const map=document.getElementById("map");
+
+let mode="city";
+
+let cities=[];
+let rails=[];
+let trains=[];
+
+let selected=null;
+
+/* MONEY */
+let money = 1000;
+
+const CITY_COST = 200;
+const RAIL_COST = 100;
+const TRAIN_COST = 300;
+
+/* UPDATE MONEY */
+function updateMoney(){
+document.getElementById("money").innerText =
+"💰 " + money + "$";
+}
+
+/* MODES */
+addCity.onclick=()=>mode="city";
+connect.onclick=()=>mode="connect";
+train.onclick=()=>mode="train";
+clear.onclick=()=>location.reload();
+
+/* CLICK */
+map.addEventListener("click",(e)=>{
+
+const rect=map.getBoundingClientRect();
+
+const x=e.clientX-rect.left;
+const y=e.clientY-rect.top;
+
+const grid=40;
+
+const sx=Math.round(x/grid)*grid;
+const sy=Math.round(y/grid)*grid;
+
+if(mode==="city") createCity(sx,sy);
+if(mode==="connect") selectCity(sx,sy);
+if(mode==="train") spawnTrainFromClick(sx,sy);
+
+});
+
+/* CREATE CITY */
+function createCity(x,y){
+
+if(money < CITY_COST){
+alert("Pas assez d'argent !");
+return;
+}
+
+money -= CITY_COST;
+updateMoney();
+
+const name="Ville "+(cities.length+1);
+
+const c=document.createElement("div");
+c.className="city";
+
+c.style.left=x+"px";
+c.style.top=y+"px";
+
+const label=document.createElement("div");
+label.className="cityLabel";
+label.innerText=name;
+
+label.style.left=x+"px";
+label.style.top=y+"px";
+
+map.appendChild(c);
+map.appendChild(label);
+
+cities.push({x,y,el:c,name});
+}
+
+function goToMenu() {
+  window.location.href = "index.html";
+}
+
+/* SELECT CITY */
+function selectCity(x,y){
+
+let found=cities.find(c =>
+Math.hypot(c.x-x,c.y-y)<20
+);
+
+if(!found) return;
+
+if(!selected){
+
+selected=found;
+found.el.style.filter="brightness(1.5)";
+
+}else{
+
+selected.el.style.filter="";
+
+drawRail(selected,found);
+
+selected=null;
+}
+}
+
+/* DRAW RAIL */
+function drawRail(a,b){
+
+let exists=rails.some(r =>
+(r.a===a && r.b===b) ||
+(r.a===b && r.b===a)
+);
+
+if(exists) return;
+
+if(money < RAIL_COST){
+alert("Pas assez d'argent !");
+return;
+}
+
+money -= RAIL_COST;
+updateMoney();
+
+const r=document.createElement("div");
+r.className="rail";
+
+const dx=b.x-a.x;
+const dy=b.y-a.y;
+
+const len=Math.sqrt(dx*dx+dy*dy);
+
+r.style.width=len+"px";
+r.style.left=a.x+"px";
+r.style.top=a.y+"px";
+r.style.transform=`rotate(${Math.atan2(dy,dx)}rad)`;
+
+const s=document.createElement("span");
+r.appendChild(s);
+
+map.appendChild(r);
+
+rails.push({a,b});
+}
+
+/* TRAIN CLICK */
+function spawnTrainFromClick(x,y){
+
+let city=cities.find(c =>
+Math.hypot(c.x-x,c.y-y)<20
+);
+
+if(!city) return;
+
+spawnTrain(city);
+}
+
+/* GET CONNECTED CITIES */
+function getConnected(city){
+
+return rails
+.filter(r => r.a===city || r.b===city)
+.map(r => r.a===city ? r.b : r.a);
+
+}
+
+/* SPAWN TRAIN */
+function spawnTrain(start){
+
+if(money < TRAIN_COST){
+alert("Pas assez d'argent !");
+return;
+}
+
+let connected=getConnected(start);
+
+if(connected.length===0){
+alert("Aucun rail relié !");
+return;
+}
+
+money -= TRAIN_COST;
+updateMoney();
+
+const t=document.createElement("div");
+t.className="train";
+
+map.appendChild(t);
+
+trains.push({
+
+current:start,
+target:connected[0],
+
+x:start.x,
+y:start.y,
+
+t:0,
+
+speed:0.003,
+
+el:t
+
+});
+}
+
+/* UPDATE */
+function update(){
+
+for(let tr of trains){
+
+let a=tr.current;
+let b=tr.target;
+
+if(!a || !b) continue;
+
+tr.t += tr.speed;
+
+/* ARRIVED */
+if(tr.t >= 1){
+
+money += 50;
+updateMoney();
+
+tr.current = b;
+
+let connected = getConnected(b);
+
+/* choisir un chemin aléatoire */
+if(connected.length > 0){
+
+/* éviter demi-tour si possible */
+let possible = connected.filter(c => c !== a);
+
+if(possible.length > 0){
+tr.target = possible[
+Math.floor(Math.random()*possible.length)
+];
+}else{
+tr.target = connected[0];
+}
+
+}
+
+tr.t = 0;
+
+continue;
+}
+
+
+/* MOVE */
+const x=a.x+(b.x-a.x)*tr.t;
+const y=a.y+(b.y-a.y)*tr.t;
+
+tr.el.style.left=x+"px";
+tr.el.style.top=y+"px";
+
+let angle=Math.atan2(
+b.y-a.y,
+b.x-a.x
+)*180/Math.PI;
+
+tr.el.style.transform=
+`translate(-50%,-50%) rotate(${angle}deg)`;
+
+}
+
+requestAnimationFrame(update);
+}
+
+update();
+
+</script>
+
+</body>
+</html>
