@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Smart Train Rails Tycoon</title>
+<title>Jeu de train</title>
 <link rel="icon" type="image/png" href="images et musiques/LogoMinisitedejeu.png">
 <style>
 
@@ -131,6 +131,67 @@ transparent 8px,
 opacity:0.8;
 }
 
+/* =========================
+   TUTORIEL
+========================= */
+
+#tutorial{
+position:absolute;
+inset:0;
+background:rgba(0,0,0,0.45);
+z-index:100;
+pointer-events:none;
+}
+
+#tutorialText{
+position:absolute;
+top:100px;
+left:50%;
+transform:translateX(-50%);
+background:white;
+padding:15px 25px;
+border-radius:15px;
+font-size:22px;
+font-weight:bold;
+box-shadow:0 5px 15px rgba(0,0,0,0.3);
+}
+
+/* MAIN */
+
+#hand{
+position:absolute;
+font-size:65px;
+z-index:999;
+pointer-events:none;
+
+left:0;
+top:0;
+
+transform:translate(-50%,-50%);
+
+transition:
+left 0.6s ease,
+top 0.6s ease;
+
+animation:tap 1s infinite;
+}
+
+@keyframes tap{
+
+0%{
+transform:translate(-50%,-50%) scale(1);
+}
+
+50%{
+transform:translate(-50%,-50%) scale(1.2);
+}
+
+100%{
+transform:translate(-50%,-50%) scale(1);
+}
+
+}
+
 /* TRAIN */
 .train{
 width:50px;
@@ -178,6 +239,20 @@ z-index:5;
 </div>
 
 <div id="map"></div>
+
+<!-- TUTORIEL -->
+
+<div id="tutorial">
+
+<div id="tutorialText">
+Construire 2 villes
+</div>
+
+<div id="hand">
+👆
+</div>
+
+</div>
 
 <script>
 
@@ -455,7 +530,226 @@ requestAnimationFrame(update);
 
 update();
 
-</script>
+/* =========================
+   TUTORIEL COMPLET
+========================= */
 
+const tutorial = document.getElementById("tutorial");
+const tutorialText = document.getElementById("tutorialText");
+const hand = document.getElementById("hand");
+
+let step = 0;
+
+/* BOUTONS */
+
+const addCityBtn = document.getElementById("addCity");
+const connectBtn = document.getElementById("connect");
+const trainBtn = document.getElementById("train");
+
+/* =========================
+   MOVE HAND
+========================= */
+
+function moveHand(x,y){
+
+hand.style.left = x + "px";
+hand.style.top = y + "px";
+
+}
+
+/* =========================
+   POSITION BOUTON
+========================= */
+
+function buttonPos(btn){
+
+const r = btn.getBoundingClientRect();
+
+return{
+
+x:r.left + r.width/2,
+y:r.top + r.height/2
+
+};
+
+}
+
+/* =========================
+   POSITION INITIALE
+========================= */
+
+setTimeout(()=>{
+
+const pos = buttonPos(addCityBtn);
+
+moveHand(pos.x,pos.y);
+
+},50);
+
+/* =========================
+   ETAPE 1 : VILLES
+========================= */
+
+tutorialText.innerText =
+"Construire 2 villes";
+
+let cityLoop = setInterval(()=>{
+
+if(step !== 0) return;
+
+const pos = buttonPos(addCityBtn);
+
+/* bouton ville */
+moveHand(pos.x,pos.y);
+
+setTimeout(()=>{
+
+/* ville 1 */
+moveHand(
+window.innerWidth/2 - 120,
+window.innerHeight/2
+);
+
+},700);
+
+setTimeout(()=>{
+
+/* bouton ville */
+moveHand(pos.x,pos.y);
+
+},1400);
+
+setTimeout(()=>{
+
+/* ville 2 */
+moveHand(
+window.innerWidth/2 + 120,
+window.innerHeight/2
+);
+
+},2100);
+
+},3000);
+
+/* =========================
+   VERIFICATION
+========================= */
+
+setInterval(()=>{
+
+/* =========================
+   ETAPE 2 : RAIL
+========================= */
+
+if(step===0 && cities.length >= 2){
+
+step = 1;
+
+clearInterval(cityLoop);
+
+tutorialText.innerText =
+"Construire un rail";
+
+const pos = buttonPos(connectBtn);
+
+let railLoop = setInterval(()=>{
+
+if(step !== 1){
+
+clearInterval(railLoop);
+return;
+
+}
+
+/* bouton rail */
+moveHand(pos.x,pos.y);
+
+setTimeout(()=>{
+
+/* ville 1 */
+moveHand(
+cities[0].x,
+cities[0].y
+);
+
+},700);
+
+setTimeout(()=>{
+
+/* ville 2 */
+moveHand(
+cities[1].x,
+cities[1].y
+);
+
+},1400);
+
+},2500);
+
+}
+
+/* =========================
+   ETAPE 3 : TRAIN
+========================= */
+
+if(step===1 && rails.length >= 1){
+
+step = 2;
+
+tutorialText.innerText =
+"Ajouter un train";
+
+const pos = buttonPos(trainBtn);
+
+let trainLoop = setInterval(()=>{
+
+if(step !== 2){
+
+clearInterval(trainLoop);
+return;
+
+}
+
+/* bouton train */
+moveHand(pos.x,pos.y);
+
+setTimeout(()=>{
+
+/* ville */
+moveHand(
+cities[0].x,
+cities[0].y
+);
+
+},700);
+
+},1800);
+
+}
+
+/* =========================
+   FIN
+========================= */
+
+if(step===2 && trains.length >= 1){
+
+step = 3;
+
+tutorialText.innerText =
+"Bravo 🎉";
+
+hand.style.display = "none";
+
+setTimeout(()=>{
+
+tutorial.style.display = "none";
+
+},2000);
+
+}
+
+},300);
+
+</script>
 </body>
 </html>
