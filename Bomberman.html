@@ -60,7 +60,7 @@ h1{
 #ui{
     position:absolute;
     top:15px;
-    left:20px;
+    left:150px;
     font-size:24px;
     background:rgba(0,0,0,0.6);
     padding:10px 18px;
@@ -187,9 +187,28 @@ h1{
     border-color:#ffcc00;
     box-shadow:0 0 10px #ffcc00;
 }
+
+#menuBtn {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  padding: 8px 15px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(to right,#ff9800,#ffb74d);
+  color: white;
+  box-shadow: 0 0 10px #ff9800;
+  cursor: pointer;
+  z-index: 1000;
+}
+
+
 </style>
 </head>
 <body>
+
+<button onclick="goToMenu()" id="menuBtn">🏠 Menu</button>    
 
 <div id="menu">
     <h1>BOMBERMAN</h1>
@@ -201,6 +220,7 @@ h1{
 <div id="ui">Niveau : <span id="level">1</span></div>
 <div id="board"></div>
 <div id="inventory"></div>
+
 
 <div id="gameScreen">
     <div id="gameMessage"></div>
@@ -482,6 +502,11 @@ board.addEventListener("click", e => {
     inventory[selectedInventoryItem]--; if(inventory[selectedInventoryItem]===0) selectedInventoryItem=null;
     renderInventory();
 });
+
+function goToMenu() {
+  window.location.href = "index.html";
+}
+
 </script>
 </body>
 </html>
