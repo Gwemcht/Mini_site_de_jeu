@@ -266,107 +266,214 @@ input {
 <script>
 const symbols = ["🍒","🍋","⭐","🔔","🍇","💎"];
 
-let credits = parseInt(localStorage.getItem("credits"));
-if (isNaN(credits) || credits <= 0) credits = 200;
+let credits = Number(localStorage.getItem("credits"));
+
+if (!Number.isFinite(credits) || credits <= 0) {
+    credits = 200;
+}
+
+let spinning = false;
 
 const creditsEl = document.getElementById("credits");
 creditsEl.textContent = credits;
 
 function save() {
-    localStorage.setItem("credits", credits);
+    if (Number.isFinite(credits)) {
+        localStorage.setItem("credits", credits);
+    }
 }
 
 function animate(slot) {
     let i = 0;
+
     const anim = setInterval(() => {
-        slot.textContent = symbols[Math.floor(Math.random()*symbols.length)];
-        if (++i > 18) clearInterval(anim);
+        slot.textContent =
+            symbols[Math.floor(Math.random() * symbols.length)];
+
+        i++;
+
+        if (i > 18) {
+            clearInterval(anim);
+        }
     }, 50);
 }
 
 function pullLever() {
+    if (spinning) return;
+
     const stick = document.getElementById("leverStick");
+
     stick.classList.add("lever-pull");
-    setTimeout(() => stick.classList.remove("lever-pull"), 250);
+
+    setTimeout(() => {
+        stick.classList.remove("lever-pull");
+    }, 250);
+
     spin();
 }
 
 function goToMenu() {
-  window.location.href = "index.html";
+    window.location.href = "index.html";
 }
 
 function jackpotExplosion() {
-    const c = document.getElementById("particles");
+    const container = document.getElementById("particles");
+
     for (let i = 0; i < 40; i++) {
         const p = document.createElement("div");
+
         p.className = "particle";
         p.style.left = "50%";
         p.style.top = "50%";
-        p.style.setProperty("--x", (Math.random()*400-200)+"px");
-        p.style.setProperty("--y", (Math.random()*400-200)+"px");
-        c.appendChild(p);
-        setTimeout(()=>p.remove(),1000);
+
+        p.style.setProperty(
+            "--x",
+            (Math.random() * 400 - 200) + "px"
+        );
+
+        p.style.setProperty(
+            "--y",
+            (Math.random() * 400 - 200) + "px"
+        );
+
+        container.appendChild(p);
+
+        setTimeout(() => {
+            p.remove();
+        }, 1000);
     }
 }
 
 function spin() {
-    const mise = parseInt(document.getElementById("mise").value);
+
+    if (spinning) return;
+
     const res = document.getElementById("result");
 
-    if (mise <= 0 || mise > credits) {
+    const miseInput =
+        document.getElementById("mise").value.trim();
+
+    const mise = Number(miseInput);
+
+    if (
+        !Number.isFinite(mise) ||
+        mise <= 0 ||
+        mise > credits
+    ) {
         res.textContent = "❌ Mise invalide";
         res.style.color = "red";
         return;
     }
 
+    spinning = true;
+
     credits -= mise;
+
+    if (!Number.isFinite(credits)) {
+        credits = 200;
+    }
+
     save();
     creditsEl.textContent = credits;
 
-    animate(slot1); animate(slot2); animate(slot3);
+    animate(slot1);
+    animate(slot2);
+    animate(slot3);
 
     setTimeout(() => {
-        slot1.textContent = symbols[Math.floor(Math.random()*symbols.length)];
-        slot2.textContent = symbols[Math.floor(Math.random()*symbols.length)];
-        slot3.textContent = symbols[Math.floor(Math.random()*symbols.length)];
 
-        if (slot1.textContent === slot2.textContent && slot2.textContent === slot3.textContent) {
+        slot1.textContent =
+            symbols[Math.floor(Math.random() * symbols.length)];
+
+        slot2.textContent =
+            symbols[Math.floor(Math.random() * symbols.length)];
+
+        slot3.textContent =
+            symbols[Math.floor(Math.random() * symbols.length)];
+
+        if (
+            slot1.textContent === slot2.textContent &&
+            slot2.textContent === slot3.textContent
+        ) {
+
             const win = mise * 15;
+
             credits += win;
-            res.textContent = "💥 JACKPOT +" + win;
+
+            res.textContent =
+                "💥 JACKPOT +" + win;
+
             res.style.color = "gold";
+
             jackpotExplosion();
+
         } else if (
+
             slot1.textContent === slot2.textContent ||
             slot2.textContent === slot3.textContent ||
             slot1.textContent === slot3.textContent
+
         ) {
+
             const win = mise * 3;
+
             credits += win;
-            res.textContent = "✨ Gagné +" + win;
+
+            res.textContent =
+                "✨ Gagné +" + win;
+
             res.style.color = "#7dd3ff";
+
         } else {
+
             res.textContent = "❌ Perdu…";
             res.style.color = "#ccc";
+        }
+
+        if (!Number.isFinite(credits)) {
+            credits = 200;
         }
 
         save();
         creditsEl.textContent = credits;
 
         if (credits <= 0) {
-            document.getElementById("gameOverOverlay").style.display = "flex";
-            document.getElementById("leverBall").onclick = null;
+
+            document.getElementById(
+                "gameOverOverlay"
+            ).style.display = "flex";
+
+            document.getElementById(
+                "leverBall"
+            ).onclick = null;
         }
+
+        spinning = false;
+
     }, 1000);
 }
 
 function restartGame() {
+
     credits = 200;
+
     save();
+
     creditsEl.textContent = credits;
-    document.getElementById("gameOverOverlay").style.display = "none";
-    document.getElementById("leverBall").onclick = pullLever;
-    document.getElementById("result").textContent = "";
+
+    document.getElementById(
+        "gameOverOverlay"
+    ).style.display = "none";
+
+    document.getElementById(
+        "leverBall"
+    ).onclick = pullLever;
+
+    document.getElementById(
+        "result"
+    ).textContent = "";
+
+    spinning = false;
 }
 </script>
 
