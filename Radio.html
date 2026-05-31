@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="images et musiques/LogoMinisitedejeu.png">
+<title>Radio</title>
+
+<style>
+body{
+    font-family: Arial;
+    background:#0f0f0f;
+    color:white;
+    text-align:center;
+}
+
+h1{
+    color:#ff4d4d;
+}
+
+input{
+    width:80%;
+    max-width:500px;
+    padding:12px;
+    margin:10px;
+    border:none;
+    border-radius:8px;
+    font-size:16px;
+}
+
+#results{
+    display:grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap:15px;
+    padding:20px;
+}
+
+.card{
+    background:#1c1c1c;
+    padding:15px;
+    border-radius:10px;
+    cursor:pointer;
+    transition:0.2s;
+}
+
+.card:hover{
+    background:#ff4d4d;
+}
+
+img{
+    width:60px;
+    height:60px;
+    border-radius:10px;
+}
+
+audio{
+    width:90%;
+    max-width:600px;
+    margin:15px;
+}
+
+#menuBtn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 8px 15px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(to right,#ff9800,#ffb74d);
+  color: white;
+  box-shadow: 0 0 10px #ff9800;
+  cursor: pointer;
+  z-index: 20;
+}
+
+</style>
+</head>
+<body>
+
+<h1>📻 Radio</h1>
+
+<button onclick="goToMenu()" id="menuBtn">🏠 Menu</button>
+
+<input type="text" id="search" placeholder="Rechercher une radio (ex: jazz, NRJ, France...)">
+
+<audio id="player" controls></audio>
+
+<div id="results"></div>
+
+<script>
+
+const API = "https://de1.api.radio-browser.info/json/stations/search?limit=25&name=";
+
+async function search(query){
+    const res = await fetch(API + query);
+    const data = await res.json();
+
+    const results = document.getElementById("results");
+    results.innerHTML = "";
+
+    data.forEach(station => {
+        const card = document.createElement("div");
+        card.className = "card";
+
+        card.innerHTML = `
+            <img src="${station.favicon || ''}" onerror="this.style.display='none'">
+            <h3>${station.name}</h3>
+            <p>🌍 ${station.country || "Inconnu"}</p>
+        `;
+
+        card.onclick = () => {
+            const player = document.getElementById("player");
+            player.src = station.url_resolved;
+            player.play();
+        };
+
+        results.appendChild(card);
+    });
+}
+
+document.getElementById("search").addEventListener("input", (e) => {
+    if(e.target.value.length > 2){
+        search(e.target.value);
+    }
+});
+
+function goToMenu() {
+  window.location.href = "index.html";
+}
+
+
+</script>
+
+</body>
+</html>
