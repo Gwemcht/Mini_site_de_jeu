@@ -59,6 +59,7 @@ audio{
     margin:15px;
 }
 
+/* bouton menu */
 #menuBtn {
   position: absolute;
   top: 10px;
@@ -74,8 +75,19 @@ audio{
   z-index: 20;
 }
 
+/* VISUALISATEUR */
+#visualizer{
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    width: 180px;
+    height: 80px;
+    opacity: 0.8;
+    pointer-events: none;
+}
 </style>
 </head>
+
 <body>
 
 <h1>📻 Radio</h1>
@@ -84,7 +96,9 @@ audio{
 
 <input type="text" id="search" placeholder="Rechercher une radio (ex: jazz, NRJ, France...)">
 
-<audio id="player" controls></audio>
+<audio id="player"crossorigin="anonymous"></audio>
+
+<canvas id="visualizer"></canvas>
 
 <div id="results"></div>
 
@@ -92,6 +106,78 @@ audio{
 
 const API = "https://de1.api.radio-browser.info/json/stations/search?limit=25&name=";
 
+const player = document.getElementById("player");
+
+let audioCtx;
+let analyser;
+let source;
+let dataArray;
+
+const canvas = document.getElementById("visualizer");
+const ctx = canvas.getContext("2d");
+
+canvas.width = 180;
+canvas.height = 80;
+
+function setupAudio() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    if (source) {
+        source.disconnect();
+    }
+
+    try {
+        source = audioCtx.createMediaElementSource(player);
+    } catch(e) {
+        return; // évite erreur si déjà connecté
+    }
+
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 64;
+
+    source.connect(analyser);
+    analyser.connect(audioCtx.destination);
+
+    const bufferLength = analyser.frequencyBinCount;
+    dataArray = new Uint8Array(bufferLength);
+
+    draw();
+}
+
+function draw() {
+    requestAnimationFrame(draw);
+
+    if (!analyser) return;
+
+    analyser.getByteFrequencyData(dataArray);
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    const barWidth = canvas.width / dataArray.length;
+
+    for (let i = 0; i < dataArray.length; i++) {
+        const barHeight = dataArray[i] / 2;
+
+        ctx.fillStyle = "#ff4d4d";
+        ctx.fillRect(
+            i * barWidth,
+            canvas.height - barHeight,
+            barWidth - 2,
+            barHeight
+        );
+    }
+}
+
+// lecture radio SANS onclick dans les cartes
+async function playStation(url){
+    player.src = url;
+    await player.play();
+    setupAudio();
+}
+
+// recherche radio
 async function search(query){
     const res = await fetch(API + query);
     const data = await res.json();
@@ -109,11 +195,10 @@ async function search(query){
             <p>🌍 ${station.country || "Inconnu"}</p>
         `;
 
-        card.onclick = () => {
-            const player = document.getElementById("player");
-            player.src = station.url_resolved;
-            player.play();
-        };
+        // plus de onclick direct sur card → fonction propre
+        card.addEventListener("click", () => {
+            playStation(station.url_resolved);
+        });
 
         results.appendChild(card);
     });
@@ -126,9 +211,8 @@ document.getElementById("search").addEventListener("input", (e) => {
 });
 
 function goToMenu() {
-  window.location.href = "index.html";
+    window.location.href = "index.html";
 }
-
 
 </script>
 
