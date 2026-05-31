@@ -122,28 +122,21 @@ canvas.height = 80;
 function setupAudio() {
     if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
 
-    if (source) {
-        source.disconnect();
-    }
-
-    try {
+        // Créé UNE SEULE FOIS
         source = audioCtx.createMediaElementSource(player);
-    } catch(e) {
-        return; // évite erreur si déjà connecté
+
+        analyser = audioCtx.createAnalyser();
+        analyser.fftSize = 64;
+
+        source.connect(analyser);
+        analyser.connect(audioCtx.destination);
+
+        const bufferLength = analyser.frequencyBinCount;
+        dataArray = new Uint8Array(bufferLength);
+
+        draw();
     }
-
-    analyser = audioCtx.createAnalyser();
-    analyser.fftSize = 64;
-
-    source.connect(analyser);
-    analyser.connect(audioCtx.destination);
-
-    const bufferLength = analyser.frequencyBinCount;
-    dataArray = new Uint8Array(bufferLength);
-
-    draw();
 }
 
 function draw() {
