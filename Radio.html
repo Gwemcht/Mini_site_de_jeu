@@ -3,19 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<link rel="icon" type="image/png" href="images et musiques/LogoMinisitedejeu.png">
-<title>Radio</title>
+<title>📻 Radio</title>
 
 <style>
 body{
-    font-family: Arial;
+    font-family:Arial,sans-serif;
     background:#0f0f0f;
     color:white;
     text-align:center;
+    margin:0;
 }
 
 h1{
     color:#ff4d4d;
+    margin-top:60px;
 }
 
 input{
@@ -30,7 +31,7 @@ input{
 
 #results{
     display:grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
     gap:15px;
     padding:20px;
 }
@@ -40,17 +41,19 @@ input{
     padding:15px;
     border-radius:10px;
     cursor:pointer;
-    transition:0.2s;
+    transition:.2s;
 }
 
 .card:hover{
     background:#ff4d4d;
+    transform:scale(1.03);
 }
 
-img{
+.card img{
     width:60px;
     height:60px;
     border-radius:10px;
+    object-fit:cover;
 }
 
 audio{
@@ -59,44 +62,45 @@ audio{
     margin:15px;
 }
 
-/* bouton menu */
-#menuBtn {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  padding: 8px 15px;
-  font-size: 16px;
-  border-radius: 8px;
-  border: none;
-  background: linear-gradient(to right,#ff9800,#ffb74d);
-  color: white;
-  box-shadow: 0 0 10px #ff9800;
-  cursor: pointer;
-  z-index: 20;
+#menuBtn{
+    position:absolute;
+    top:10px;
+    left:10px;
+    padding:8px 15px;
+    font-size:16px;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    background:linear-gradient(to right,#ff9800,#ffb74d);
+    color:white;
+    box-shadow:0 0 10px #ff9800;
 }
 
-/* VISUALISATEUR */
 #visualizer{
-    position: fixed;
-    top: 10px;
-    right: 10px;
-    width: 180px;
-    height: 80px;
-    opacity: 0.8;
-    pointer-events: none;
+    position:fixed;
+    top:10px;
+    right:10px;
+    width:180px;
+    height:80px;
+    opacity:.8;
+    pointer-events:none;
 }
 </style>
 </head>
 
 <body>
 
+<button id="menuBtn" onclick="goToMenu()">🏠 Menu</button>
+
 <h1>📻 Radio</h1>
 
-<button onclick="goToMenu()" id="menuBtn">🏠 Menu</button>
+<input
+id="search"
+type="text"
+placeholder="Rechercher une radio (NRJ, Jazz, France Info...)"
+>
 
-<input type="text" id="search" placeholder="Rechercher une radio (ex: jazz, NRJ, France...)">
-
-<audio id="player"crossorigin="anonymous"></audio>
+<audio id="player" crossorigin="anonymous"></audio>
 
 <canvas id="visualizer"></canvas>
 
@@ -104,9 +108,11 @@ audio{
 
 <script>
 
-const API = "https://de1.api.radio-browser.info/json/stations/search?limit=25&name=";
+const API =
+"https://de1.api.radio-browser.info/json/stations/search?hidebroken=true&limit=50&name=";
 
 const player = document.getElementById("player");
+const results = document.getElementById("results");
 
 let audioCtx;
 let analyser;
@@ -119,41 +125,49 @@ const ctx = canvas.getContext("2d");
 canvas.width = 180;
 canvas.height = 80;
 
-function setupAudio() {
-    if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+// =========================
+// VISUALIZER
+// =========================
 
-        // Créé UNE SEULE FOIS
-        source = audioCtx.createMediaElementSource(player);
+function setupAudio(){
 
-        analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 64;
+    if(audioCtx) return;
 
-        source.connect(analyser);
-        analyser.connect(audioCtx.destination);
+    audioCtx = new(window.AudioContext || window.webkitAudioContext)();
 
-        const bufferLength = analyser.frequencyBinCount;
-        dataArray = new Uint8Array(bufferLength);
+    source = audioCtx.createMediaElementSource(player);
 
-        draw();
-    }
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 64;
+
+    source.connect(analyser);
+    analyser.connect(audioCtx.destination);
+
+    const bufferLength = analyser.frequencyBinCount;
+
+    dataArray = new Uint8Array(bufferLength);
+
+    draw();
 }
 
-function draw() {
+function draw(){
+
     requestAnimationFrame(draw);
 
-    if (!analyser) return;
+    if(!analyser) return;
 
     analyser.getByteFrequencyData(dataArray);
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.clearRect(0,0,canvas.width,canvas.height);
 
     const barWidth = canvas.width / dataArray.length;
 
-    for (let i = 0; i < dataArray.length; i++) {
+    for(let i=0;i<dataArray.length;i++){
+
         const barHeight = dataArray[i] / 2;
 
         ctx.fillStyle = "#ff4d4d";
+
         ctx.fillRect(
             i * barWidth,
             canvas.height - barHeight,
@@ -163,47 +177,138 @@ function draw() {
     }
 }
 
-// lecture radio SANS onclick dans les cartes
+// =========================
+// PLAY RADIO
+// =========================
+
 async function playStation(url){
-    player.src = url;
-    await player.play();
-    setupAudio();
+
+    try{
+
+        player.pause();
+
+        player.src = url;
+
+        await player.play();
+
+        setupAudio();
+
+    }catch(error){
+
+        console.error(error);
+
+        alert("Impossible de lire cette radio.");
+    }
 }
 
-// recherche radio
+player.addEventListener("error",()=>{
+
+    alert("Flux radio indisponible.");
+});
+
+// =========================
+// SEARCH
+// =========================
+
 async function search(query){
-    const res = await fetch(API + query);
-    const data = await res.json();
 
-    const results = document.getElementById("results");
-    results.innerHTML = "";
+    try{
 
-    data.forEach(station => {
-        const card = document.createElement("div");
-        card.className = "card";
+        const response =
+        await fetch(API + encodeURIComponent(query));
 
-        card.innerHTML = `
-            <img src="${station.favicon || ''}" onerror="this.style.display='none'">
-            <h3>${station.name}</h3>
-            <p>🌍 ${station.country || "Inconnu"}</p>
-        `;
+        let data = await response.json();
 
-        // plus de onclick direct sur card → fonction propre
-        card.addEventListener("click", () => {
-            playStation(station.url_resolved);
+        // radios valides uniquement
+        data = data.filter(station =>
+            station.url_resolved &&
+            station.lastcheckok === 1
+        );
+
+        // tri popularité
+        data.sort(
+            (a,b) => b.clickcount - a.clickcount
+        );
+
+        // suppression doublons
+        data = [
+            ...new Map(
+                data.map(station => [
+                    station.name.toLowerCase(),
+                    station
+                ])
+            ).values()
+        ];
+
+        results.innerHTML = "";
+
+        if(data.length === 0){
+
+            results.innerHTML =
+            "<h2>Aucune radio trouvée</h2>";
+
+            return;
+        }
+
+        data.forEach(station => {
+
+            const card = document.createElement("div");
+
+            card.className = "card";
+
+            card.innerHTML = `
+                <img
+                src="${station.favicon || ''}"
+                onerror="this.style.display='none'">
+
+                <h3>${station.name}</h3>
+
+                <p>🌍 ${station.country || 'Inconnu'}</p>
+            `;
+
+            card.addEventListener("click",()=>{
+
+                playStation(station.url_resolved);
+            });
+
+            results.appendChild(card);
         });
 
-        results.appendChild(card);
-    });
+    }catch(error){
+
+        console.error(error);
+
+        results.innerHTML =
+        "<h2>Erreur de connexion à l'API</h2>";
+    }
 }
 
-document.getElementById("search").addEventListener("input", (e) => {
-    if(e.target.value.length > 2){
-        search(e.target.value);
+// =========================
+// LIVE SEARCH
+// =========================
+
+document
+.getElementById("search")
+.addEventListener("input",(e)=>{
+
+    const value = e.target.value.trim();
+
+    if(value.length > 2){
+
+        search(value);
+
+    }else{
+
+        results.innerHTML = "";
     }
 });
 
-function goToMenu() {
+// =========================
+// MENU
+// =========================
+
+function goToMenu(){
+
     window.location.href = "index.html";
 }
 
