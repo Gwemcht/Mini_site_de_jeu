@@ -3,7 +3,7 @@ https://gwemcht.github.io/Mini_site_de_jeu/
 
 # 🎮 Mini site de jeu
 
-Bienvenue sur **Mini sie de jeu**, un site web regroupant une collection de jeux amusants et interactifs accessibles directement depuis votre navigateur !
+Bienvenue sur **Mini site de jeu**, un site web regroupant une collection de jeux amusants et interactifs accessibles directement depuis votre navigateur !
 
 ## 🚀 À propos du projet
 
