@@ -277,10 +277,96 @@ audio{
     margin-top:10px;
     font-size:14px;
 }
+
+#accountBtn{
+position:fixed;
+top:20px;
+right:20px;
+z-index:1000;
+background:#00eaff;
+border:none;
+padding:12px 18px;
+border-radius:10px;
+cursor:pointer;
+font-weight:bold;
+}
+
+#accountPopup{
+display:none;
+position:fixed;
+inset:0;
+background:rgba(0,0,0,0.85);
+z-index:9999;
+justify-content:center;
+align-items:center;
+}
+
+#accountBox{
+background:#222;
+padding:25px;
+width:320px;
+border-radius:15px;
+color:white;
+}
+
+#accountBox input{
+width:100%;
+margin:5px 0;
+padding:10px;
+border:none;
+border-radius:8px;
+background:#333;
+color:white;
+}
+
+#accountBox button{
+width:100%;
+margin-top:10px;
+padding:10px;
+border:none;
+border-radius:8px;
+cursor:pointer;
+}
+
+hr{
+margin:15px 0;
+}
+
 </style>
 </head>
 
 <body>
+
+<button id="accountBtn">Compte</button>
+
+<div id="accountPopup">
+
+<div id="accountBox">
+
+<h2>Créer un compte</h2>
+
+<input id="regName" placeholder="Nom">
+<input id="regEmail" placeholder="Email">
+<input id="regPass" type="password" placeholder="Mot de passe">
+
+<button onclick="register()">Créer</button>
+
+<hr>
+
+<h2>Connexion</h2>
+
+<input id="logEmail" placeholder="Email">
+<input id="logPass" type="password" placeholder="Mot de passe">
+
+<button onclick="login()">Connexion</button>
+
+<p id="msg"></p>
+
+<button onclick="closePopup()">Fermer</button>
+
+</div>
+
+</div>    
 
 <!-- ===== FOND ASTEROIDES ===== -->
 <canvas id="asteroids"></canvas>
@@ -669,6 +755,65 @@ bugForm.addEventListener("submit", async (e)=>{
     }
 
 });
+
+const popup = document.getElementById("accountPopup");
+const msg = document.getElementById("msg");
+
+document.getElementById("accountBtn").onclick = () => {
+popup.style.display = "flex";
+};
+
+function closePopup(){
+popup.style.display = "none";
+}
+
+function register(){
+
+let name = document.getElementById("regName").value;
+let email = document.getElementById("regEmail").value;
+let pass = document.getElementById("regPass").value;
+
+if(!name || !email || !pass){
+msg.innerText = "Remplis tout";
+return;
+}
+
+let users = JSON.parse(localStorage.getItem("users") || "[]");
+
+if(users.find(u => u.email === email)){
+msg.innerText = "Email déjà utilisé";
+return;
+}
+
+users.push({name,email,pass});
+
+localStorage.setItem("users", JSON.stringify(users));
+
+msg.innerText = "Compte créé !";
+
+}
+
+function login(){
+
+let email = document.getElementById("logEmail").value;
+let pass = document.getElementById("logPass").value;
+
+let users = JSON.parse(localStorage.getItem("users") || "[]");
+
+let user = users.find(u =>
+u.email === email && u.pass === pass
+);
+
+if(!user){
+msg.innerText = "Identifiants incorrects";
+return;
+}
+
+msg.innerText = "Bienvenue " + user.name;
+
+localStorage.setItem("currentUser", JSON.stringify(user));
+}
+
 </script>
 
 </body>
