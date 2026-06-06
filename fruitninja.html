@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<link rel="icon" type="image/png" href="images et musiques/LogoMinisitedejeu.png">
+<title>Fruit Ninja</title>
+
+<style>
+body{
+margin:0;
+overflow:hidden;
+background:#111;
+touch-action:none;
+overscroll-behavior:none;
+}
+
+canvas{
+display:block;
+background:#01004553;
+}
+
+#ui{
+position:fixed;
+top:10px;
+left:10px;
+color:white;
+font-size:20px;
+z-index:10;
+}
+
+#menuBtn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 8px 15px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(to right,#ff9800,#ffb74d);
+  color: white;
+  box-shadow: 0 0 10px #ff9800;
+  cursor: pointer;
+  z-index: 20;
+}
+
+</style>
+</head>
+
+<body>
+
+<div id="ui">Score: <span id="score">0</span></div>
+<canvas id="c"></canvas>
+
+<button onclick="goToMenu()" id="menuBtn">🏠 Menu</button>
+
+<script>
+const c=document.getElementById("c");
+const x=c.getContext("2d");
+
+let fruits=[],halves=[],particles=[];
+let score=0;
+
+// resize mobile
+function resize(){
+c.width=innerWidth;
+c.height=innerHeight;
+}
+window.onresize=resize;
+resize();
+
+// ---------------- FRUITS ----------------
+class Fruit{
+constructor(){
+this.x=Math.random()*c.width;
+this.y=c.height+60;
+this.vx=(Math.random()-0.5)*4;
+this.vy=-Math.random()*12-10;
+this.e=["🍎","🍌","🍉","🍇","🍊","🍓","🍒","🍈","🍐","🍋","🥑","🥝","🥭","🍍"][Math.random()*14|0];
+this.dead=false;
+}
+update(){
+this.x+=this.vx;
+this.y+=this.vy;
+this.vy+=0.25;
+if(this.y>c.height+120) this.dead=true;
+}
+draw(){
+x.font="40px Arial";
+x.textAlign="center";
+x.fillText(this.e,this.x,this.y);
+}
+}
+
+// ---------------- HALF ----------------
+class Half{
+constructor(f){
+this.x=f.x;
+this.y=f.y;
+this.e=f.e;
+this.vx=(Math.random()-0.5)*6;
+this.vy=-Math.random()*8;
+this.life=40;
+}
+update(){
+this.x+=this.vx;
+this.y+=this.vy;
+this.vy+=0.3;
+this.life--;
+}
+draw(){
+x.globalAlpha=this.life/40;
+x.font="40px Arial";
+x.textAlign="center";
+x.fillText(this.e,this.x,this.y);
+x.globalAlpha=1;
+}
+}
+
+// ---------------- PARTICLES ----------------
+class Particle{
+constructor(x,y){
+this.x=x;
+this.y=y;
+this.vx=(Math.random()-0.5)*6;
+this.vy=(Math.random()-0.5)*6;
+this.life=25;
+}
+update(){
+this.x+=this.vx;
+this.y+=this.vy;
+this.vy+=0.1;
+this.life--;
+}
+draw(){
+x.globalAlpha=this.life/25;
+x.font="18px Arial";
+x.fillText("💥",this.x,this.y);
+x.globalAlpha=1;
+}
+}
+
+function goToMenu() {
+  window.location.href = "index.html";
+}
+
+// ---------------- SPAWN INFINTI ----------------
+setInterval(()=>{
+if(fruits.length<10){
+fruits.push(new Fruit());
+}
+},400);
+
+// ---------------- SABRE ----------------
+let mouse=false;
+let path=[];
+
+// PC
+c.addEventListener("mousedown",()=>{
+mouse=true;
+path=[];
+});
+
+c.addEventListener("mouseup",()=>{
+mouse=false;
+});
+
+// MOBILE
+c.addEventListener("touchstart",()=>{
+mouse=true;
+path=[];
+},{passive:false});
+
+c.addEventListener("touchend",()=>{
+mouse=false;
+},{passive:false});
+
+c.addEventListener("mousemove",e=>{
+handleMove(e.clientX,e.clientY);
+});
+
+c.addEventListener("touchmove",e=>{
+let t=e.touches[0];
+handleMove(t.clientX,t.clientY);
+e.preventDefault();
+},{passive:false});
+
+// ---------------- MOVE ----------------
+function handleMove(cx,cy){
+let rect=c.getBoundingClientRect();
+
+let p={
+x:(cx-rect.left)*(c.width/rect.width),
+y:(cy-rect.top)*(c.height/rect.height)
+};
+
+if(mouse){
+path.push(p);
+if(path.length>15) path.shift();
+check(p);
+}
+}
+
+// ---------------- COLLISION ----------------
+function check(p){
+for(let i=fruits.length-1;i>=0;i--){
+let f=fruits[i];
+let dx=f.x-p.x;
+let dy=f.y-p.y;
+
+if(dx*dx+dy*dy<1600){
+
+score++;
+document.getElementById("score").innerText=score;
+
+// cut
+halves.push(new Half(f));
+halves.push(new Half(f));
+
+// juice
+for(let j=0;j<5;j++){
+particles.push(new Particle(f.x,f.y));
+}
+
+fruits.splice(i,1);
+}
+}
+}
+
+// ---------------- LOOP ----------------
+function loop(){
+
+x.clearRect(0,0,c.width,c.height);
+
+// fruits
+for(let i=fruits.length-1;i>=0;i--){
+fruits[i].update();
+fruits[i].draw();
+if(fruits[i].dead) fruits.splice(i,1);
+}
+
+// halves
+for(let h of halves){
+h.update();
+h.draw();
+}
+halves=halves.filter(h=>h.life>0);
+
+// particles
+for(let p of particles){
+p.update();
+p.draw();
+}
+particles=particles.filter(p=>p.life>0);
+
+// ---------------- SABRE TRACE ----------------
+for(let i=0;i<path.length-1;i++){
+let a=path[i];
+let b=path[i+1];
+
+x.globalAlpha=i/path.length;
+x.strokeStyle="white";
+x.lineWidth=5;
+x.lineCap="round";
+
+x.beginPath();
+x.moveTo(a.x,a.y);
+x.lineTo(b.x,b.y);
+x.stroke();
+}
+
+// fade sabre (IMPORTANT FIX)
+if(!mouse && path.length>0){
+path.shift();
+}
+
+x.globalAlpha=1;
+
+requestAnimationFrame(loop);
+}
+loop();
+</script>
+
+</body>
+</html>
