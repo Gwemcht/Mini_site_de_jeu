@@ -27,32 +27,93 @@ left:10px;
 color:white;
 font-size:20px;
 z-index:10;
+font-family:Arial,sans-serif;
 }
 
-#menuBtn {
-  position: absolute;
-  top: 10px;
-  left: 100px;
-  padding: 8px 15px;
-  font-size: 16px;
-  border-radius: 8px;
-  border: none;
-  background: linear-gradient(to right,#ff9800,#ffb74d);
-  color: white;
-  box-shadow: 0 0 10px #ff9800;
-  cursor: pointer;
-  z-index: 20;
+#menuBtn{
+position:absolute;
+top:10px;
+left:120px;
+padding:8px 15px;
+font-size:16px;
+border-radius:8px;
+border:none;
+background:linear-gradient(to right,#ff9800,#ffb74d);
+color:white;
+box-shadow:0 0 10px #ff9800;
+cursor:pointer;
+z-index:20;
 }
 
+#modeBtn{
+position:absolute;
+top:10px;
+left:240px;
+padding:8px 15px;
+font-size:16px;
+border-radius:8px;
+border:none;
+background:linear-gradient(to right,#4caf50,#66bb6a);
+color:white;
+box-shadow:0 0 10px #4caf50;
+cursor:pointer;
+z-index:20;
+}
+
+#gameOverScreen{
+position:fixed;
+inset:0;
+background:rgba(0,0,0,0.9);
+display:none;
+justify-content:center;
+align-items:center;
+flex-direction:column;
+color:white;
+font-family:Arial,sans-serif;
+z-index:9999;
+}
+
+#gameOverScreen h1{
+font-size:60px;
+margin:0 0 20px;
+color:#ff4444;
+}
+
+#gameOverScreen p{
+font-size:30px;
+margin-bottom:25px;
+}
+
+#gameOverScreen button{
+padding:15px 30px;
+font-size:22px;
+border:none;
+border-radius:12px;
+background:#4caf50;
+color:white;
+cursor:pointer;
+}
 </style>
 </head>
 
 <body>
 
-<div id="ui">Score: <span id="score">0</span></div>
+<div id="ui">
+Score: <span id="score">0</span>
+<br>
+<span id="lifeDisplay">Vies: <span id="lives">3</span></span>
+</div>
+
 <canvas id="c"></canvas>
 
 <button onclick="goToMenu()" id="menuBtn">🏠 Menu</button>
+<button id="modeBtn">Passer en mode Infini</button>
+
+<div id="gameOverScreen">
+    <h1>💀 GAME OVER</h1>
+    <p>Score final : <span id="finalScore">0</span></p>
+    <button onclick="restartGame()">🔄 Rejouer</button>
+</div>
 
 <script>
 const c=document.getElementById("c");
@@ -61,7 +122,10 @@ const x=c.getContext("2d");
 let fruits=[],halves=[],particles=[];
 let score=0;
 
-// resize mobile
+let mode="classique";
+let vies=3;
+let gameOverState=false;
+
 function resize(){
 c.width=innerWidth;
 c.height=innerHeight;
@@ -69,22 +133,49 @@ c.height=innerHeight;
 window.onresize=resize;
 resize();
 
-// ---------------- FRUITS ----------------
+/* ---------------- FRUIT ---------------- */
 class Fruit{
 constructor(){
-this.x=Math.random()*c.width;
-this.y=c.height+60;
-this.vx=(Math.random()-0.5)*4;
-this.vy=-Math.random()*12-10;
+this.x = 80 + Math.random()*(c.width-160);
+this.y = c.height + 60;
+
+this.vx = (Math.random()-0.5)*1.5;
+this.vy = -Math.random()*12-10;
+
 this.e=["🍎","🍌","🍉","🍇","🍊","🍓","🍒","🍈","🍐","🍋","🥑","🥝","🥭","🍍"][Math.random()*14|0];
 this.dead=false;
 }
+
 update(){
-this.x+=this.vx;
-this.y+=this.vy;
-this.vy+=0.25;
-if(this.y>c.height+120) this.dead=true;
+
+this.x += this.vx;
+this.y += this.vy;
+
+this.vy += 0.25;
+
+/* 🧱 MURS */
+if(this.x < 40){
+this.x = 40;
+this.vx = Math.abs(this.vx);
 }
+
+if(this.x > c.width - 40){
+this.x = c.width - 40;
+this.vx = -Math.abs(this.vx);
+}
+
+/* 🔥 MUR DU HAUT (IMPORTANT) */
+if(this.y < 40){
+this.y = 40;
+this.vy = Math.abs(this.vy);
+}
+
+/* 💀 SORTIE BAS */
+if(this.y > c.height + 120){
+this.dead = true;
+}
+}
+
 draw(){
 x.font="60px Arial";
 x.textAlign="center";
@@ -92,7 +183,7 @@ x.fillText(this.e,this.x,this.y);
 }
 }
 
-// ---------------- HALF ----------------
+/* ---------------- RESTE IDENTIQUE ---------------- */
 class Half{
 constructor(f){
 this.x=f.x;
@@ -117,7 +208,6 @@ x.globalAlpha=1;
 }
 }
 
-// ---------------- PARTICLES ----------------
 class Particle{
 constructor(x,y){
 this.x=x;
@@ -140,55 +230,43 @@ x.globalAlpha=1;
 }
 }
 
-function goToMenu() {
-  window.location.href = "index.html";
+function goToMenu(){
+window.location.href="index.html";
 }
 
-// ---------------- SPAWN INFINTI ----------------
-setInterval(()=>{
-if(fruits.length<10){
-fruits.push(new Fruit());
-}
-},400);
+/* ---------------- SPAWN ---------------- */
+function spawnFruit(){
 
-// ---------------- SABRE ----------------
+if(gameOverState) return;
+
+if(mode==="infini"){
+if(fruits.length<10) fruits.push(new Fruit());
+}else{
+if(fruits.length<4) fruits.push(new Fruit());
+}
+
+setTimeout(spawnFruit, mode==="infini" ? 400 : 900);
+}
+spawnFruit();
+
+/* ---------------- INPUT ---------------- */
 let mouse=false;
 let path=[];
 
-// PC
-c.addEventListener("mousedown",()=>{
-mouse=true;
-path=[];
-});
+c.addEventListener("mousedown",()=>{mouse=true;path=[];});
+c.addEventListener("mouseup",()=>{mouse=false;});
+c.addEventListener("touchstart",()=>{mouse=true;path=[];},{passive:false});
+c.addEventListener("touchend",()=>{mouse=false;},{passive:false});
 
-c.addEventListener("mouseup",()=>{
-mouse=false;
-});
-
-// MOBILE
-c.addEventListener("touchstart",()=>{
-mouse=true;
-path=[];
-},{passive:false});
-
-c.addEventListener("touchend",()=>{
-mouse=false;
-},{passive:false});
-
-c.addEventListener("mousemove",e=>{
-handleMove(e.clientX,e.clientY);
-});
-
+c.addEventListener("mousemove",e=>handleMove(e.clientX,e.clientY));
 c.addEventListener("touchmove",e=>{
 let t=e.touches[0];
 handleMove(t.clientX,t.clientY);
 e.preventDefault();
 },{passive:false});
 
-// ---------------- MOVE ----------------
 function handleMove(cx,cy){
 let rect=c.getBoundingClientRect();
-
 let p={
 x:(cx-rect.left)*(c.width/rect.width),
 y:(cy-rect.top)*(c.height/rect.height)
@@ -201,10 +279,14 @@ check(p);
 }
 }
 
-// ---------------- COLLISION ----------------
+/* ---------------- COLLISION ---------------- */
 function check(p){
+
+if(gameOverState) return;
+
 for(let i=fruits.length-1;i>=0;i--){
 let f=fruits[i];
+
 let dx=f.x-p.x;
 let dy=f.y-p.y;
 
@@ -213,11 +295,9 @@ if(dx*dx+dy*dy<1600){
 score++;
 document.getElementById("score").innerText=score;
 
-// cut
 halves.push(new Half(f));
 halves.push(new Half(f));
 
-// juice
 for(let j=0;j<5;j++){
 particles.push(new Particle(f.x,f.y));
 }
@@ -227,33 +307,94 @@ fruits.splice(i,1);
 }
 }
 
-// ---------------- LOOP ----------------
+/* ---------------- GAME OVER ---------------- */
+function gameOver(){
+gameOverState=true;
+document.getElementById("finalScore").innerText=score;
+document.getElementById("gameOverScreen").style.display="flex";
+}
+
+/* ---------------- RESTART ---------------- */
+function restartGame(){
+
+score=0;
+vies=3;
+gameOverState=false;
+
+fruits=[];
+halves=[];
+particles=[];
+path=[];
+
+document.getElementById("score").innerText=0;
+document.getElementById("lives").innerText=3;
+
+document.getElementById("gameOverScreen").style.display="none";
+
+spawnFruit();
+}
+
+/* ---------------- MODE ---------------- */
+const modeBtn=document.getElementById("modeBtn");
+
+modeBtn.onclick=()=>{
+
+if(mode==="classique"){
+mode="infini";
+modeBtn.textContent="Passer en mode Classique";
+document.getElementById("lifeDisplay").style.display="none";
+}else{
+mode="classique";
+modeBtn.textContent="Passer en mode Infini";
+document.getElementById("lifeDisplay").style.display="block";
+vies=3;
+document.getElementById("lives").innerText=vies;
+}
+};
+
+/* ---------------- LOOP ---------------- */
 function loop(){
+
+if(gameOverState){
+requestAnimationFrame(loop);
+return;
+}
 
 x.clearRect(0,0,c.width,c.height);
 
-// fruits
+/* fruits */
 for(let i=fruits.length-1;i>=0;i--){
 fruits[i].update();
 fruits[i].draw();
-if(fruits[i].dead) fruits.splice(i,1);
+
+if(fruits[i].dead){
+
+if(mode==="classique"){
+vies--;
+document.getElementById("lives").innerText=vies;
+
+if(vies<=0) gameOver();
 }
 
-// halves
+fruits.splice(i,1);
+}
+}
+
+/* halves */
 for(let h of halves){
 h.update();
 h.draw();
 }
 halves=halves.filter(h=>h.life>0);
 
-// particles
+/* particles */
 for(let p of particles){
 p.update();
 p.draw();
 }
 particles=particles.filter(p=>p.life>0);
 
-// ---------------- SABRE TRACE ----------------
+/* sword */
 for(let i=0;i<path.length-1;i++){
 let a=path[i];
 let b=path[i+1];
@@ -269,15 +410,14 @@ x.lineTo(b.x,b.y);
 x.stroke();
 }
 
-// fade sabre (IMPORTANT FIX)
 if(!mouse && path.length>0){
 path.shift();
 }
 
 x.globalAlpha=1;
-
 requestAnimationFrame(loop);
 }
+
 loop();
 </script>
 
