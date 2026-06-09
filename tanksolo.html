@@ -168,7 +168,7 @@ button{
 <audio id="shootSound" src="images et musiques/_fr_sound_tir-laser-1_ - Copie.mp3"></audio>
 <audio id="boomSound" src="https://voicebot.su/fr/sound/la-bombe-explose-avec-des-eclats-qui-senvolent/.mp3"></audio>
 <audio id="bgMusic" src="http://soundimage.org/wp-content/uploads/2014/10/Light-Years_v001.mp3" loop></audio>
-<audio id="ohNoSound" src="https://www.soundboardly.com/wp-content/uploads/2023/09/Oh-No-Oh-No-Oh-No-no-no-no.mp3" preload="auto"></audio>
+<audio id="ohNoSound" src="images et musiques/oh-no.mp3" preload="auto"></audio>
 
 <script>
 const game = document.getElementById("game");
@@ -396,7 +396,7 @@ document.getElementById("startBtn").onclick=()=>{
 /* Fin */
 function endGame(victoire){
   gameOver=true; endScreen.style.display="flex";
-  endMsg.textContent=victoire ? "Victoire ​🏆​ Score : "+score : "Game Over​ Score : "+score;
+  endMsg.textContent=victoire ? "Victoire 🏆 Score : "+score : "Game Over Score : "+score;
   try{bgMusic.pause();}catch(e){}
   if(!victoire){ ohNoSound.currentTime=0; ohNoSound.play().catch(()=>{playOhNoBtn.style.display="inline-block";}); }
 }
