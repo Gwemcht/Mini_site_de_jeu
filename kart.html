@@ -364,7 +364,7 @@ document.addEventListener('keydown', e=>{
        newTop < eTop + eHeight && newTop + 60 > eTop){
       lives--;
       updateLives();
-      if(lives<=0) endGame("On ne te félicite pas!");
+      if(lives<=0) endGame("Game Over");
       car.style.left='280px';
       car.style.top='320px';
     }
@@ -373,7 +373,7 @@ document.addEventListener('keydown', e=>{
   if(document.querySelectorAll('.coin:not([style*="display: none"])').length===0){
     currentLevel++;
     if(currentLevel<levels.length) loadLevel(currentLevel);
-    else endGame("🏆 Bravo ! T'es le Big Boss !");
+    else endGame("🏆 Victoire");
   }
 });
 </script>
