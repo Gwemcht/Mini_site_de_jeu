@@ -396,7 +396,7 @@ document.getElementById("startBtn").onclick=()=>{
 /* Fin */
 function endGame(victoire){
   gameOver=true; endScreen.style.display="flex";
-  endMsg.textContent=victoire ? "T'es le big boss !​🏆​ Score : "+score : "T'es une grosse merde !💩​ Score : "+score;
+  endMsg.textContent=victoire ? "Victoire ​🏆​ Score : "+score : "Game Over​ Score : "+score;
   try{bgMusic.pause();}catch(e){}
   if(!victoire){ ohNoSound.currentTime=0; ohNoSound.play().catch(()=>{playOhNoBtn.style.display="inline-block";}); }
 }
