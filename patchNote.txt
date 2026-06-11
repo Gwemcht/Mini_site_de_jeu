@@ -17,5 +17,6 @@ v0.01.6 = ajout du QRcode
 v0.01.7 = ajout du jeu de football et du jeu de train
 v0.01.8 = ajout de Radio.html
 v0.01.9 = ajout de Fruit Ninja
+v0.02.1 = ajout du mode 2 joueurs dans jeu de football
 
 lien de Mini site de jeu   : https://gwemcht.github.io/Mini_site_de_jeu/
