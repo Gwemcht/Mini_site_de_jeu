@@ -345,6 +345,7 @@ update();
 
 });
 
+
 let ctrlPressed = false;
 let altPressed = false;
 let pPressed = false;
@@ -377,14 +378,14 @@ document.addEventListener("mouseover", (e) => {
 
         cheatCooldown = true;
 
-        money += 100000;
+        money += 1000000000000000;
         update();
 
         const txt = document.createElement("div");
         txt.className = "floating";
         txt.innerHTML = `
             <img src="images et musiques/robux.png" style="width:16px;">
-            +100000
+            +1000000000000000
         `;
 
         txt.style.left = e.pageX + "px";
@@ -394,10 +395,9 @@ document.addEventListener("mouseover", (e) => {
 
         setTimeout(() => txt.remove(), 1500);
 
-        // autorise une nouvelle utilisation après 1 seconde
         setTimeout(() => {
             cheatCooldown = false;
-        }, 1000);
+        }, 1);
     }
 });
 
