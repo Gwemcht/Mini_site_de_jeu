@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mon Clicker</title>
-
+<title>Robux Clicker</title>
+<link rel="icon" type="image/png" href="images et musiques/LogoMinisitedejeu.png">
 <style>
 *{
 margin:0;
@@ -28,20 +28,19 @@ overflow-x:hidden;
 100%{background-position:0% 50%}
 }
 
-h1{
-margin-top:15px;
-}
+h1{margin-top:15px;}
 
-#money{
+#moneyContainer{
 font-size:3rem;
 font-weight:bold;
-color:#22c55e;
 margin-top:10px;
+display:flex;
+justify-content:center;
+align-items:center;
+gap:10px;
 }
 
-#level{
-margin-bottom:20px;
-}
+#level{margin-bottom:20px;}
 
 #mainImage{
 width:260px;
@@ -50,13 +49,8 @@ transition:.1s;
 filter:drop-shadow(0 0 25px gold);
 }
 
-#mainImage:hover{
-transform:scale(1.05);
-}
-
-#mainImage:active{
-transform:scale(.9);
-}
+#mainImage:hover{transform:scale(1.05);}
+#mainImage:active{transform:scale(.9);}
 
 .shop{
 display:grid;
@@ -73,6 +67,14 @@ padding:15px;
 border-radius:15px;
 }
 
+.card p{margin:6px 0;}
+
+.desc{
+color:#cbd5e1;
+font-size:.9rem;
+min-height:45px;
+}
+
 button{
 padding:10px 15px;
 border:none;
@@ -83,22 +85,19 @@ cursor:pointer;
 margin-top:10px;
 }
 
-button:hover{
-background:#16a34a;
-}
+button:hover{background:#16a34a;}
 
 .particle{
 position:absolute;
-width:40px;
+width:30px;
+height:30px;
 pointer-events:none;
-animation:explode 1s forwards;
+animation:explode 800ms forwards;
 }
 
 @keyframes explode{
 to{
-transform:
-translate(var(--x),var(--y))
-rotate(720deg);
+transform:translate(var(--x),var(--y)) rotate(720deg) scale(0);
 opacity:0;
 }
 }
@@ -106,7 +105,7 @@ opacity:0;
 .floating{
 position:absolute;
 font-weight:bold;
-color:#22c55e;
+color:white;
 pointer-events:none;
 animation:float 1s forwards;
 }
@@ -118,53 +117,92 @@ opacity:0;
 }
 }
 
-#chest{
-margin:20px;
-padding:15px;
-display:inline-block;
-background:gold;
-color:black;
-font-weight:bold;
-border-radius:15px;
+#menuBtn {
+position:absolute;
+top:10px;
+left:10px;
+padding:8px 15px;
+border-radius:8px;
+border:none;
+background:linear-gradient(to right,#ff9800,#ffb74d);
+color:white;
 cursor:pointer;
 }
 </style>
 </head>
+
 <body>
 
-<h1>💎 MON CLICKER</h1>
+<h1>ROBUX CLICKER</h1>
 
-<div id="money">0</div>
+<div id="moneyContainer">
+  <img src="images et musiques/robux.png" style="width:40px;">
+  <span id="money">0</span>
+</div>
+
 <div id="level">Niveau 1</div>
 
+<button id="menuBtn" onclick="goToMenu()">🏠 Menu</button>
+
 <img id="mainImage" src="images et musiques/robux.png">
-
-<br>
-
-<div id="chest">🎁 Coffre Bonus</div>
 
 <div class="shop" id="shop"></div>
 
 <script>
 
-let money=0;
-let clickPower=1;
+let money = 0;
+let clickPower = 1;
 
-const upgrades=[
-{name:"🖱️ Curseur",gain:1,cost:25,owned:0},
-{name:"🤖 Auto Clicker",gain:5,cost:100,owned:0},
-{name:"⚡ Super Clicker",gain:25,cost:500,owned:0},
-{name:"🏭 Usine",gain:100,cost:2000,owned:0},
-{name:"🖥️ Serveur",gain:500,cost:10000,owned:0},
-{name:"🌐 Datacenter",gain:2500,cost:50000,owned:0},
-{name:"🚀 Fusée",gain:10000,cost:250000,owned:0},
-{name:"🏙️ Ville",gain:50000,cost:1000000,owned:0},
-{name:"🌎 Planète",gain:250000,cost:5000000,owned:0},
-{name:"⭐ Galaxie",gain:1000000,cost:25000000,owned:0},
-{name:"🌌 Univers",gain:10000000,cost:100000000,owned:0}
+const upgrades = [
+{
+name:"🖱️ Clickeur x2",
+desc:"Améliore tes clics progressivement.",
+gain:0,
+cost:50,
+owned:0
+},
+{
+name:"🤖 Auto Clicker",
+desc:"Production automatique lente.",
+gain:1,
+cost:200,
+owned:0
+},
+{
+name:"⚡ Super Clicker",
+desc:"Production améliorée.",
+gain:5,
+cost:1000,
+owned:0
+},
+{
+name:"🏭 Usine",
+desc:"Production industrielle.",
+gain:20,
+cost:5000,
+owned:0
+},
+{
+name:"🖥️ Serveur",
+desc:"Production avancée.",
+gain:80,
+cost:25000,
+owned:0
+},
+{
+name:"🌐 Datacenter",
+desc:"Production massive.",
+gain:400,
+cost:150000,
+owned:0
+}
 ];
 
-const shop=document.getElementById("shop");
+const shop = document.getElementById("shop");
+
+function getClickMultiplier(){
+return 1 + upgrades[0].owned;
+}
 
 function buildShop(){
 
@@ -173,14 +211,24 @@ shop.innerHTML="";
 upgrades.forEach((u,index)=>{
 
 let card=document.createElement("div");
-
 card.className="card";
 
 card.innerHTML=`
 <h2>${u.name}</h2>
+<p class="desc">${u.desc}</p>
 <p>Possédés : ${u.owned}</p>
-<p>+${u.gain.toLocaleString()}/s</p>
-<p>Prix : ${Math.floor(u.cost).toLocaleString()}</p>
+
+<p>
+<img src="images et musiques/robux.png" style="width:18px;vertical-align:middle;">
+${Math.floor(u.cost).toLocaleString()}
+</p>
+
+<p>
+Production :
+<img src="images et musiques/robux.png" style="width:14px;vertical-align:middle;">
++${u.gain.toLocaleString()}/s
+</p>
+
 <button onclick="buy(${index})">Acheter</button>
 `;
 
@@ -192,17 +240,40 @@ shop.appendChild(card);
 
 function buy(i){
 
-let u=upgrades[i];
+let u = upgrades[i];
 
-if(money>=u.cost){
+if(money >= u.cost){
 
-money-=u.cost;
-
+money -= u.cost;
 u.owned++;
-
-u.cost*=1.35;
+u.cost *= 1.5;
 
 update();
+
+}else{
+
+const manque = Math.ceil(u.cost - money);
+
+const box = document.createElement("div");
+box.style.position="fixed";
+box.style.top="20px";
+box.style.left="50%";
+box.style.transform="translateX(-50%)";
+box.style.background="#ef4444";
+box.style.color="white";
+box.style.padding="12px 20px";
+box.style.borderRadius="12px";
+box.style.fontWeight="bold";
+box.style.zIndex="9999";
+
+box.innerHTML = `
+<img src="images et musiques/robux.png" style="width:18px;vertical-align:middle;">
+❌ Il te manque ${manque.toLocaleString()}
+`;
+
+document.body.appendChild(box);
+
+setTimeout(()=>box.remove(),2000);
 
 }
 
@@ -210,69 +281,60 @@ update();
 
 function update(){
 
-document.getElementById("money").textContent=
-Math.floor(money).toLocaleString()+" 💰";
+document.getElementById("money").textContent =
+Math.floor(money).toLocaleString();
 
-let level=
-Math.floor(Math.sqrt(money/100))+1;
-
-document.getElementById("level").textContent=
+let level = Math.floor(Math.sqrt(money/150))+1;
+document.getElementById("level").textContent =
 "Niveau "+level;
 
 buildShop();
-
 save();
-
 }
 
-function createExplosion(x,y){
+// 💥 particules robux
+function createRobuxExplosion(x,y){
 
-for(let i=0;i<30;i++){
+for(let i=0;i<25;i++){
 
 let img=document.createElement("img");
-
 img.src="images et musiques/robux.png";
-
 img.className="particle";
 
 img.style.left=x+"px";
 img.style.top=y+"px";
 
 let angle=Math.random()*Math.PI*2;
-let dist=100+Math.random()*200;
+let dist=50+Math.random()*180;
 
-img.style.setProperty(
-"--x",
-Math.cos(angle)*dist+"px"
-);
-
-img.style.setProperty(
-"--y",
-Math.sin(angle)*dist+"px"
-);
+img.style.setProperty("--x",Math.cos(angle)*dist+"px");
+img.style.setProperty("--y",Math.sin(angle)*dist+"px");
 
 document.body.appendChild(img);
 
-setTimeout(()=>img.remove(),1000);
+setTimeout(()=>img.remove(),800);
 
 }
 
 }
 
+// 🖱️ clic
 document.getElementById("mainImage")
-.addEventListener("click",e=>{
+.addEventListener("click",(e)=>{
 
-money+=clickPower;
+let gain = clickPower * getClickMultiplier();
 
-createExplosion(
-e.pageX,
-e.pageY
-);
+money += gain;
+
+createRobuxExplosion(e.pageX,e.pageY);
 
 let txt=document.createElement("div");
-
 txt.className="floating";
-txt.textContent="+"+clickPower;
+
+txt.innerHTML = `
+<img src="images et musiques/robux.png" style="width:16px;">
++${gain}
+`;
 
 txt.style.left=e.pageX+"px";
 txt.style.top=e.pageY+"px";
@@ -285,72 +347,60 @@ update();
 
 });
 
+// ⏱️ auto income
 setInterval(()=>{
 
-let income=0;
+let income = 0;
 
 upgrades.forEach(u=>{
-income+=u.gain*u.owned;
+if(u.name !== "🖱️ Clickeur x2"){
+income += u.gain * u.owned;
+}
 });
 
-money+=income;
+money += income;
 
 update();
 
 },1000);
 
-document.getElementById("chest")
-.addEventListener("click",()=>{
-
-let reward=
-1000+Math.floor(Math.random()*5000);
-
-money+=reward;
-
-alert("Bonus : "+reward+" 💰");
-
-update();
-
-});
-
+// 💾 save
 function save(){
-
-localStorage.setItem(
-"clickerSave",
-JSON.stringify({
+localStorage.setItem("clickerSave",JSON.stringify({
 money,
 upgrades
-})
-);
-
+}));
 }
 
+// 🚪 menu
+function goToMenu(){
+window.location.href = "index.html";
+}
+
+// 🔄 load
 function load(){
 
-let saveData=
-localStorage.getItem("clickerSave");
+let data = localStorage.getItem("clickerSave");
 
-if(saveData){
+if(data){
+let obj = JSON.parse(data);
 
-let data=JSON.parse(saveData);
+money = obj.money || 0;
 
-money=data.money||0;
-
-if(data.upgrades){
+if(obj.upgrades){
 for(let i=0;i<upgrades.length;i++){
-if(data.upgrades[i]){
-upgrades[i]=data.upgrades[i];
+if(obj.upgrades[i]){
+upgrades[i] = obj.upgrades[i];
 }
 }
 }
-
 }
 
 update();
-
 }
 
 load();
+setInterval(save, 5000);
 
 </script>
 
