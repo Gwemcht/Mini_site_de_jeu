@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mon Clicker</title>
+
+<style>
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Arial,sans-serif;
+}
+
+body{
+background:linear-gradient(-45deg,#0f172a,#1e293b,#312e81,#0f172a);
+background-size:400% 400%;
+animation:bg 12s infinite ease;
+color:white;
+text-align:center;
+overflow-x:hidden;
+}
+
+@keyframes bg{
+0%{background-position:0% 50%}
+50%{background-position:100% 50%}
+100%{background-position:0% 50%}
+}
+
+h1{
+margin-top:15px;
+}
+
+#money{
+font-size:3rem;
+font-weight:bold;
+color:#22c55e;
+margin-top:10px;
+}
+
+#level{
+margin-bottom:20px;
+}
+
+#mainImage{
+width:260px;
+cursor:pointer;
+transition:.1s;
+filter:drop-shadow(0 0 25px gold);
+}
+
+#mainImage:hover{
+transform:scale(1.05);
+}
+
+#mainImage:active{
+transform:scale(.9);
+}
+
+.shop{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+gap:15px;
+width:95%;
+max-width:1200px;
+margin:30px auto;
+}
+
+.card{
+background:#1e293b;
+padding:15px;
+border-radius:15px;
+}
+
+button{
+padding:10px 15px;
+border:none;
+background:#22c55e;
+color:white;
+border-radius:10px;
+cursor:pointer;
+margin-top:10px;
+}
+
+button:hover{
+background:#16a34a;
+}
+
+.particle{
+position:absolute;
+width:40px;
+pointer-events:none;
+animation:explode 1s forwards;
+}
+
+@keyframes explode{
+to{
+transform:
+translate(var(--x),var(--y))
+rotate(720deg);
+opacity:0;
+}
+}
+
+.floating{
+position:absolute;
+font-weight:bold;
+color:#22c55e;
+pointer-events:none;
+animation:float 1s forwards;
+}
+
+@keyframes float{
+to{
+transform:translateY(-100px);
+opacity:0;
+}
+}
+
+#chest{
+margin:20px;
+padding:15px;
+display:inline-block;
+background:gold;
+color:black;
+font-weight:bold;
+border-radius:15px;
+cursor:pointer;
+}
+</style>
+</head>
+<body>
+
+<h1>💎 MON CLICKER</h1>
+
+<div id="money">0</div>
+<div id="level">Niveau 1</div>
+
+<img id="mainImage" src="images et musiques/robux.png">
+
+<br>
+
+<div id="chest">🎁 Coffre Bonus</div>
+
+<div class="shop" id="shop"></div>
+
+<script>
+
+let money=0;
+let clickPower=1;
+
+const upgrades=[
+{name:"🖱️ Curseur",gain:1,cost:25,owned:0},
+{name:"🤖 Auto Clicker",gain:5,cost:100,owned:0},
+{name:"⚡ Super Clicker",gain:25,cost:500,owned:0},
+{name:"🏭 Usine",gain:100,cost:2000,owned:0},
+{name:"🖥️ Serveur",gain:500,cost:10000,owned:0},
+{name:"🌐 Datacenter",gain:2500,cost:50000,owned:0},
+{name:"🚀 Fusée",gain:10000,cost:250000,owned:0},
+{name:"🏙️ Ville",gain:50000,cost:1000000,owned:0},
+{name:"🌎 Planète",gain:250000,cost:5000000,owned:0},
+{name:"⭐ Galaxie",gain:1000000,cost:25000000,owned:0},
+{name:"🌌 Univers",gain:10000000,cost:100000000,owned:0}
+];
+
+const shop=document.getElementById("shop");
+
+function buildShop(){
+
+shop.innerHTML="";
+
+upgrades.forEach((u,index)=>{
+
+let card=document.createElement("div");
+
+card.className="card";
+
+card.innerHTML=`
+<h2>${u.name}</h2>
+<p>Possédés : ${u.owned}</p>
+<p>+${u.gain.toLocaleString()}/s</p>
+<p>Prix : ${Math.floor(u.cost).toLocaleString()}</p>
+<button onclick="buy(${index})">Acheter</button>
+`;
+
+shop.appendChild(card);
+
+});
+
+}
+
+function buy(i){
+
+let u=upgrades[i];
+
+if(money>=u.cost){
+
+money-=u.cost;
+
+u.owned++;
+
+u.cost*=1.35;
+
+update();
+
+}
+
+}
+
+function update(){
+
+document.getElementById("money").textContent=
+Math.floor(money).toLocaleString()+" 💰";
+
+let level=
+Math.floor(Math.sqrt(money/100))+1;
+
+document.getElementById("level").textContent=
+"Niveau "+level;
+
+buildShop();
+
+save();
+
+}
+
+function createExplosion(x,y){
+
+for(let i=0;i<30;i++){
+
+let img=document.createElement("img");
+
+img.src="images et musiques/robux.png";
+
+img.className="particle";
+
+img.style.left=x+"px";
+img.style.top=y+"px";
+
+let angle=Math.random()*Math.PI*2;
+let dist=100+Math.random()*200;
+
+img.style.setProperty(
+"--x",
+Math.cos(angle)*dist+"px"
+);
+
+img.style.setProperty(
+"--y",
+Math.sin(angle)*dist+"px"
+);
+
+document.body.appendChild(img);
+
+setTimeout(()=>img.remove(),1000);
+
+}
+
+}
+
+document.getElementById("mainImage")
+.addEventListener("click",e=>{
+
+money+=clickPower;
+
+createExplosion(
+e.pageX,
+e.pageY
+);
+
+let txt=document.createElement("div");
+
+txt.className="floating";
+txt.textContent="+"+clickPower;
+
+txt.style.left=e.pageX+"px";
+txt.style.top=e.pageY+"px";
+
+document.body.appendChild(txt);
+
+setTimeout(()=>txt.remove(),1000);
+
+update();
+
+});
+
+setInterval(()=>{
+
+let income=0;
+
+upgrades.forEach(u=>{
+income+=u.gain*u.owned;
+});
+
+money+=income;
+
+update();
+
+},1000);
+
+document.getElementById("chest")
+.addEventListener("click",()=>{
+
+let reward=
+1000+Math.floor(Math.random()*5000);
+
+money+=reward;
+
+alert("Bonus : "+reward+" 💰");
+
+update();
+
+});
+
+function save(){
+
+localStorage.setItem(
+"clickerSave",
+JSON.stringify({
+money,
+upgrades
+})
+);
+
+}
+
+function load(){
+
+let saveData=
+localStorage.getItem("clickerSave");
+
+if(saveData){
+
+let data=JSON.parse(saveData);
+
+money=data.money||0;
+
+if(data.upgrades){
+for(let i=0;i<upgrades.length;i++){
+if(data.upgrades[i]){
+upgrades[i]=data.upgrades[i];
+}
+}
+}
+
+}
+
+update();
+
+}
+
+load();
+
+</script>
+
+</body>
+</html>
