@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"><title>3D Obby</title>
+<style>
+body{margin:0;overflow:hidden;background:#000;font-family:sans-serif}
+#ui{position:absolute;top:20px;left:20px;color:white;background:#000b;padding:15px;border-radius:10px;z-index:5}
+#win{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:60px;color:#ff0;text-shadow:4px 4px #000;font-weight:bold;z-index:5}
+</style>
+</head>
+<body>
+    
+<div id="ui"><b>3D Obby</b><br>⬆️⬇️⬅️➡️ Bouger<br>ESPACE : Saut<br>Souris : Caméra</div>
+<div id="win">🏆 Gagné ! 🏆</div>
+
+<script type="importmap">{"imports":{"three":"https://unpkg.com/three@0.160.0/build/three.module.js"}}</script>
+
+<script type="module">
+import * as THREE from"three";
+
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x111111);
+
+const camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,.1,2500);
+
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+document.body.appendChild(renderer.domElement);
+
+scene.add(new THREE.AmbientLight(0xffffff,.8));
+
+let sun=new THREE.DirectionalLight(0xffffff,1);
+sun.position.set(20,50,20);
+scene.add(sun);
+
+const player=new THREE.Group();
+scene.add(player);
+
+const mat={
+y:new THREE.MeshStandardMaterial({color:0xffff00}),
+b:new THREE.MeshStandardMaterial({color:0x0000ff}),
+g:new THREE.MeshStandardMaterial({color:0x00ff00})
+};
+
+function cube(w,h,d,m){return new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m)}
+
+let head=cube(1.2,1.2,1.2,mat.y);
+head.position.y=1.6;
+player.add(head);
+
+player.add(cube(2,2,1,mat.b));
+
+function limb(x,y,m){
+let g=new THREE.Group();
+g.position.set(x,y,0);
+let c=cube(.8,2,.8,m);
+c.position.y=-.8;
+g.add(c);
+return g;
+}
+
+let la=limb(-1.4,.8,mat.y),ra=limb(1.4,.8,mat.y);
+let ll=limb(-.55,-1,mat.g),rl=limb(.55,-1,mat.g);
+
+player.add(la,ra,ll,rl);
+
+let platforms=[],moving=[];
+let respawn=new THREE.Vector3(0,5,0);
+
+function add(w,h,d,x,y,z,c,t="solid"){
+let m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color:c}));
+m.position.set(x,y,z);
+scene.add(m);
+platforms.push({mesh:m,h,type:t});
+return m;
+}
+
+// SALLE FERMEE
+
+add(500,2,800,0,-15,-230,0xff2200,"kill");
+add(5,250,800,-250,90,-230,0x222222);
+add(5,250,800,250,90,-230,0x222222);
+add(500,250,5,0,90,150,0x222222);
+add(500,250,5,0,90,-650,0x222222);
+add(500,5,800,0,220,-230,0x111111);
+
+
+// PARCOURS
+
+add(25,1,25,0,-4,0,0x555555);
+add(10,1,10,0,-2,-20,0x00ff00);
+add(12,2,12,0,-1,-35,0xffff00,"checkpoint");
+
+add(8,1,8,-6,1,-50,0xffaa00);
+add(8,1,8,6,3,-60,0xffaa00);
+add(8,1,8,-6,5,-70,0xffaa00);
+
+add(10,1,10,0,7,-85,0x00ffaa);
+add(10,1,10,5,8,-100,0x00ffaa);
+add(14,2,14,0,9,-120,0xffff00,"checkpoint");
+
+add(22,.5,55,0,9,-155,0xff0000,"kill");
+
+
+for(let i=0;i<3;i++){
+let p=add(8,1,8,0,10+i*2,-135-i*15,0x00ffff);
+moving.push({mesh:p,a:-8,b:8,s:.012,t:i});
+}
+
+add(14,2,14,0,16,-205,0xffff00,"checkpoint");
+
+
+for(let i=0;i<8;i++){
+let a=i*.8;
+add(7,1,7,Math.cos(a)*10,16+i*2,-220-i*7,0xff55ee);
+}
+
+add(14,2,14,0,35,-280,0xffff00,"checkpoint");
+
+
+for(let i=0;i<5;i++){
+let c=[0xff0000,0xff8800,0xffff00,0x00ff00,0x0000ff][i];
+add(10,1,10,i%2?-8:8,38+i*3,-300-i*12,c);
+}
+
+
+add(18,8,18,0,55,-380,0xffd700,"checkpoint");
+
+for(let i=0;i<10;i++){
+let c=new THREE.Color().setHSL(i/10,1,.5);
+add(12,1,6,Math.sin(i)*5,58+i*1.5,-400-i*7,c,"rainbow");
+}
+
+add(40,10,40,0,75,-480,0xffd700,"win");
+
+
+// CAMERA
+
+let pivot=new THREE.Object3D(),arm=new THREE.Object3D();
+
+scene.add(pivot);
+pivot.add(arm);
+arm.add(camera);
+
+camera.position.set(0,4,12);
+
+
+// CONTROLES
+
+let keys={},yaw=0,pitch=0,vy=0,grounded=false;
+
+let speed=.30,gravity=.009,jump=.45;
+
+onkeydown=e=>keys[e.code]=true;
+onkeyup=e=>keys[e.code]=false;
+
+onmousedown=()=>renderer.domElement.requestPointerLock();
+
+onmousemove=e=>{
+if(document.pointerLockElement===renderer.domElement){
+
+yaw-=e.movementX*.003;
+pitch-=e.movementY*.002;
+
+pitch=Math.max(-1.2,Math.min(1.2,pitch));
+
+pivot.rotation.y=yaw;
+arm.rotation.x=pitch;
+player.rotation.y=yaw;
+
+}
+};
+
+
+// UPDATE
+
+function update(){
+
+moving.forEach(p=>{
+p.t+=p.s;
+p.mesh.position.x=THREE.MathUtils.lerp(p.a,p.b,(Math.sin(p.t)+1)/2);
+});
+
+
+let dir=new THREE.Vector3();
+
+if(keys.ArrowUp)dir.z--;
+if(keys.ArrowDown)dir.z++;
+if(keys.ArrowLeft)dir.x--;
+if(keys.ArrowRight)dir.x++;
+
+
+if(dir.length()){
+dir.normalize();
+dir.applyAxisAngle(new THREE.Vector3(0,1,0),yaw);
+player.position.addScaledVector(dir,speed);
+}
+
+
+if(!grounded)vy-=gravity;
+
+player.position.y+=vy;
+grounded=false;
+
+
+let box=new THREE.Box3().setFromCenterAndSize(
+player.position,new THREE.Vector3(2,6,2)
+);
+
+platforms.forEach(p=>{
+
+let b=new THREE.Box3().setFromObject(p.mesh);
+
+if(box.intersectsBox(b)){
+
+let top=p.mesh.position.y+p.h/2;
+
+
+// LAVE
+
+if(p.type==="kill"){
+
+player.position.copy(respawn);
+vy=0;
+
+}
+
+
+// FIN
+
+else if(p.type==="win"){
+
+respawn.copy(p.mesh.position);
+respawn.y+=8;
+
+document.getElementById("win").style.display="block";
+
+}
+
+
+// PLATEFORME
+
+else if(vy<=0&&player.position.y-3>=top-2){
+
+player.position.y=top+3;
+vy=0;
+grounded=true;
+
+
+// CHECKPOINT
+
+if(p.type==="checkpoint"||p.type==="win"){
+
+respawn.copy(p.mesh.position);
+respawn.y+=8;
+
+}
+
+}
+
+}
+
+});
+
+
+// SAUT
+
+if(keys.Space&&grounded){
+
+vy=jump;
+grounded=false;
+
+}
+
+
+// SECURITE
+
+if(player.position.y<-80){
+
+player.position.copy(respawn);
+vy=0;
+
+}
+
+
+pivot.position.copy(player.position);
+
+}
+
+
+// ANIMATION PERSONNAGE
+
+let time=0;
+
+function animatePlayer(){
+
+let move=keys.ArrowUp||keys.ArrowDown||keys.ArrowLeft||keys.ArrowRight;
+
+if(move&&grounded)time+=.15;
+
+let a=move?Math.sin(time)*.5:0;
+
+la.rotation.x=THREE.MathUtils.lerp(la.rotation.x,a,.15);
+ra.rotation.x=THREE.MathUtils.lerp(ra.rotation.x,-a,.15);
+ll.rotation.x=THREE.MathUtils.lerp(ll.rotation.x,-a,.15);
+rl.rotation.x=THREE.MathUtils.lerp(rl.rotation.x,a,.15);
+
+}
+
+
+// BOUCLE DU JEU
+
+function loop(){
+
+requestAnimationFrame(loop);
+
+update();
+animatePlayer();
+
+renderer.render(scene,camera);
+
+}
+
+loop();
+
+
+// REDIMENSIONNEMENT
+
+window.addEventListener("resize",()=>{
+
+camera.aspect=innerWidth/innerHeight;
+
+camera.updateProjectionMatrix();
+
+renderer.setSize(innerWidth,innerHeight);
+
+});
+
+</script>
+</body>
+</html>
