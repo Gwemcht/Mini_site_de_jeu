@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Draw a Perfect Circle</title>
+<link rel="icon" type="image/png" href="images et musiques/LogoMinisitedejeu.png">
 
 <style>
 *{box-sizing:border-box;user-select:none;-webkit-user-select:none}
@@ -27,13 +28,31 @@ button:hover{background:#2563eb;transform:scale(1.04)}
 button:active{transform:scale(.98)}
 
 #status{margin-top:13px;min-height:20px;color:#9ca3af;font-size:14px}
+
+#menuBtn {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 8px 15px;
+  font-size: 16px;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(to right,#ff9800,#ffb74d);
+  color: white;
+  box-shadow: 0 0 10px #ff9800;
+  cursor: pointer;
+  z-index: 20;
+}
+
+
 </style>
 </head>
 
 <body>
 
 <h1>⭕ Draw a Perfect Circle</h1>
-<div id="subtitle">Choisis toi-même la taille de ton cercle</div>
+<div id="subtitle">Dessine un cercle parfait</div>
+<button onclick="goToMenu()" id="menuBtn">🏠 Menu</button>
 
 <div id="game">
     <canvas id="canvas"></canvas>
@@ -249,6 +268,11 @@ window.addEventListener("resize",resizeCanvas);
 resizeCanvas();
 drawBackground();
 drawCenterPoint();
+
+function goToMenu() {
+  window.location.href = "index.html";
+}
+
 </script>
 
 </body>
