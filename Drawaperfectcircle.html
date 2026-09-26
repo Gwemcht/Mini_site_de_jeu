@@ -2,877 +2,253 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
 <title>Draw a Perfect Circle</title>
 
 <style>
-* {
-    box-sizing: border-box;
-    user-select: none;
-    -webkit-user-select: none;
-}
+*{box-sizing:border-box;user-select:none;-webkit-user-select:none}
+html,body{margin:0;width:100%;height:100%}
+body{background:radial-gradient(circle at center,#202938,#0f172a);color:#fff;font-family:Arial,Helvetica,sans-serif;display:flex;flex-direction:column;align-items:center;overflow:hidden}
+h1{margin:22px 0 4px;font-size:30px;font-weight:800}
+#subtitle{color:#9ca3af;margin-bottom:15px;font-size:15px}
 
-body {
-    margin: 0;
-    min-height: 100vh;
-    background: #111827;
-    color: white;
-    font-family: Arial, sans-serif;
+#game{position:relative;width:min(92vw,650px);height:min(72vh,650px);background:#17202f;border:2px solid #374151;border-radius:22px;overflow:hidden;touch-action:none;cursor:crosshair;box-shadow:0 25px 70px rgba(0,0,0,.45)}
+canvas{display:block;width:100%;height:100%}
 
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+#accuracy{position:absolute;top:15px;left:50%;transform:translateX(-50%);padding:7px 15px;border-radius:30px;background:rgba(15,23,42,.78);border:1px solid rgba(255,255,255,.08);color:#d1d5db;font-size:14px;pointer-events:none;transition:color .1s}
 
-    overflow: hidden;
-}
+#result{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;background:rgba(10,15,25,.95);backdrop-filter:blur(8px)}
+#resultTitle{font-size:30px;margin-bottom:5px}
+#score{font-size:82px;font-weight:900;line-height:1;margin:5px 0 12px}
+#message{color:#d1d5db;font-size:18px;margin-bottom:28px}
 
-h1 {
-    margin: 25px 0 5px;
-    font-size: 32px;
-}
+button{border:0;padding:14px 30px;border-radius:12px;background:#3b82f6;color:#fff;font-size:17px;font-weight:bold;cursor:pointer;transition:.15s}
+button:hover{background:#2563eb;transform:scale(1.04)}
+button:active{transform:scale(.98)}
 
-#info {
-    color: #9ca3af;
-    margin-bottom: 15px;
-    text-align: center;
-}
-
-#game {
-    position: relative;
-
-    width: min(90vw, 650px);
-    height: min(70vh, 650px);
-
-    background: #1f2937;
-
-    border: 3px solid #374151;
-    border-radius: 20px;
-
-    overflow: hidden;
-
-    touch-action: none;
-    cursor: crosshair;
-
-    box-shadow: 0 20px 50px rgba(0,0,0,.4);
-}
-
-canvas {
-    width: 100%;
-    height: 100%;
-    display: block;
-}
-
-#result {
-    position: absolute;
-    inset: 0;
-
-    background: rgba(17,24,39,.96);
-
-    display: none;
-
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-
-    text-align: center;
-}
-
-#result h2 {
-    font-size: 30px;
-    margin: 0 0 5px;
-}
-
-#score {
-    font-size: 75px;
-    font-weight: bold;
-    margin: 5px;
-}
-
-#message {
-    color: #d1d5db;
-    margin-bottom: 25px;
-    font-size: 18px;
-}
-
-button {
-    border: none;
-
-    padding: 14px 30px;
-
-    border-radius: 10px;
-
-    background: #3b82f6;
-    color: white;
-
-    font-size: 18px;
-    font-weight: bold;
-
-    cursor: pointer;
-
-    transition: .2s;
-}
-
-button:hover {
-    background: #2563eb;
-    transform: scale(1.05);
-}
-
-#status {
-    margin-top: 15px;
-    color: #9ca3af;
-}
+#status{margin-top:13px;min-height:20px;color:#9ca3af;font-size:14px}
 </style>
 </head>
 
 <body>
 
 <h1>⭕ Draw a Perfect Circle</h1>
-
-<div id="info">
-    Dessine un cercle le plus parfait possible !
-</div>
+<div id="subtitle">Choisis toi-même la taille de ton cercle</div>
 
 <div id="game">
-
     <canvas id="canvas"></canvas>
+    <div id="accuracy">Prêt</div>
 
     <div id="result">
-
-        <h2>Résultat</h2>
-
+        <div id="resultTitle">Résultat</div>
         <div id="score">0%</div>
-
-        <div id="message"></div>
-
-        <button onclick="restart()">
-            Rejouer
-        </button>
-
+        <div id="message">-</div>
+        <button id="restart">Rejouer</button>
     </div>
-
 </div>
 
-<div id="status">
-    Commence à dessiner...
-</div>
-
+<div id="status">Commence à dessiner...</div>
 
 <script>
+const $=id=>document.getElementById(id),
+game=$("game"),canvas=$("canvas"),ctx=canvas.getContext("2d"),
+accuracyElement=$("accuracy"),statusElement=$("status"),result=$("result"),
+scoreElement=$("score"),messageElement=$("message"),restartButton=$("restart");
 
-const game = document.getElementById("game");
-const canvas = document.getElementById("canvas");
-const ctx = canvas.getContext("2d");
+let drawing=false,points=[],accuracySamples=[],width=0,height=0,
+centerX=0,centerY=0,playerRadius=0,previousAngle=null,totalAngle=0;
 
-const result = document.getElementById("result");
-const scoreElement = document.getElementById("score");
-const messageElement = document.getElementById("message");
-const statusElement = document.getElementById("status");
+const GREEN=85,YELLOW=60,ORANGE=40;
 
-let drawing = false;
-let points = [];
-
-
-// =====================================================
-// CANVAS
-// =====================================================
-
-function resizeCanvas() {
-
-    canvas.width = game.clientWidth;
-    canvas.height = game.clientHeight;
-
-    ctx.clearRect(
-        0,
-        0,
-        canvas.width,
-        canvas.height
-    );
+function resizeCanvas(){
+    const r=game.getBoundingClientRect(),dpr=devicePixelRatio||1;
+    width=r.width;height=r.height;
+    canvas.width=width*dpr;canvas.height=height*dpr;
+    canvas.style.width=width+"px";canvas.style.height=height+"px";
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    centerX=width/2;centerY=height/2;
+    drawBackground();drawCenterPoint();
 }
 
-window.addEventListener("resize", resizeCanvas);
+function drawBackground(){ctx.clearRect(0,0,width,height)}
 
-resizeCanvas();
+function drawCenterPoint(){
+    ctx.save();
+    ctx.beginPath();ctx.arc(centerX,centerY,9,0,Math.PI*2);
+    ctx.fillStyle="rgba(59,130,246,.12)";ctx.fill();
+    ctx.beginPath();ctx.arc(centerX,centerY,4,0,Math.PI*2);
+    ctx.fillStyle="#60a5fa";ctx.fill();ctx.restore();
+}
 
+function getPosition(e){
+    const r=canvas.getBoundingClientRect(),p=e.touches?e.touches[0]:e;
+    return{x:p.clientX-r.left,y:p.clientY-r.top};
+}
 
-// =====================================================
-// POSITION
-// =====================================================
+function getRadius(p){return Math.hypot(p.x-centerX,p.y-centerY)}
 
-function getPosition(e) {
+function getAccuracy(p){
+    return Math.max(0,Math.min(100,100-Math.abs(getRadius(p)-playerRadius)/playerRadius*100));
+}
 
-    const rect = canvas.getBoundingClientRect();
+function getColor(a){
+    return a>=GREEN?"#22c55e":a>=YELLOW?"#eab308":a>=ORANGE?"#f97316":"#ef4444";
+}
 
-    let x;
-    let y;
+function updateAccuracy(a){
+    accuracyElement.textContent=`Précision : ${Math.round(a)}%`;
+    accuracyElement.style.color=getColor(a);
+    statusElement.textContent=
+        a>=GREEN?"🟢 Parfait !":
+        a>=YELLOW?"🟡 Très proche...":
+        a>=ORANGE?"🟠 Tu t'éloignes...":"🔴 Attention !";
+}
 
-    if (e.touches) {
+function startDrawing(e){
+    e.preventDefault();
+    if(result.style.display==="flex")return;
 
-        x = e.touches[0].clientX;
-        y = e.touches[0].clientY;
+    const p=getPosition(e),radius=getRadius(p);
 
-    } else {
-
-        x = e.clientX;
-        y = e.clientY;
+    if(radius<30){
+        statusElement.textContent="Commence plus loin du point central.";
+        return;
     }
 
-    return {
-        x: x - rect.left,
-        y: y - rect.top
-    };
+    drawing=true;points=[];accuracySamples=[];totalAngle=0;previousAngle=null;
+    playerRadius=radius;
+    points.push(p);accuracySamples.push(100);
+
+    previousAngle=Math.atan2(p.y-centerY,p.x-centerX);
+
+    drawBackground();drawCenterPoint();
+
+    ctx.beginPath();ctx.arc(p.x,p.y,3,0,Math.PI*2);
+    ctx.fillStyle="#22c55e";ctx.fill();
+
+    updateAccuracy(100);
+    statusElement.textContent="🟢 Garde la même distance du point !";
 }
 
-
-// =====================================================
-// COMMENCER
-// =====================================================
-
-function startDrawing(e) {
-
+function draw(e){
+    if(!drawing)return;
     e.preventDefault();
 
-    drawing = true;
+    const p=getPosition(e),previous=points.at(-1);
+    if(!previous)return;
 
-    points = [];
-
-    const p = getPosition(e);
+    const movement=Math.hypot(p.x-previous.x,p.y-previous.y);
+    if(movement<2)return;
 
     points.push(p);
 
-    ctx.clearRect(
-        0,
-        0,
-        canvas.width,
-        canvas.height
-    );
+    const accuracy=getAccuracy(p);
+    accuracySamples.push(accuracy);
+
+    const angle=Math.atan2(p.y-centerY,p.x-centerX);
+
+    if(previousAngle!==null){
+        let difference=angle-previousAngle;
+        if(difference>Math.PI)difference-=Math.PI*2;
+        if(difference<-Math.PI)difference+=Math.PI*2;
+        if(Math.abs(difference)<1)totalAngle+=difference;
+    }
+
+    previousAngle=angle;
 
     ctx.beginPath();
-
-    ctx.moveTo(
-        p.x,
-        p.y
-    );
-
-    statusElement.textContent =
-        "Dessine ton cercle...";
-}
-
-
-// =====================================================
-// DESSINER
-// =====================================================
-
-function draw(e) {
-
-    if (!drawing)
-        return;
-
-    e.preventDefault();
-
-    const p = getPosition(e);
-
-    const last =
-        points[points.length - 1];
-
-    if (!last)
-        return;
-
-    const distance =
-        Math.hypot(
-            p.x - last.x,
-            p.y - last.y
-        );
-
-    if (distance < 2)
-        return;
-
-    points.push(p);
-
-    ctx.lineTo(
-        p.x,
-        p.y
-    );
-
-    ctx.strokeStyle =
-        "#60a5fa";
-
-    ctx.lineWidth =
-        4;
-
-    ctx.lineCap =
-        "round";
-
-    ctx.lineJoin =
-        "round";
-
+    ctx.moveTo(previous.x,previous.y);
+    ctx.lineTo(p.x,p.y);
+    ctx.strokeStyle=getColor(accuracy);
+    ctx.lineWidth=5;
+    ctx.lineCap="round";
+    ctx.lineJoin="round";
     ctx.stroke();
+
+    updateAccuracy(accuracy);
 }
 
+function stopDrawing(){
+    if(!drawing)return;
+    drawing=false;
 
-// =====================================================
-// FIN
-// =====================================================
-
-function stopDrawing(e) {
-
-    if (!drawing)
-        return;
-
-    drawing = false;
-
-    if (points.length < 40) {
-
-        statusElement.textContent =
-            "Dessine un cercle plus grand.";
-
+    if(points.length<40){
+        statusElement.textContent="Dessine un cercle plus complet.";
         return;
     }
 
-    evaluateCircle();
+    const rotations=Math.abs(totalAngle)/(Math.PI*2);
+
+    if(rotations<.80){
+        statusElement.textContent="Continue jusqu'à faire presque un tour complet.";
+        return;
+    }
+
+    calculateScore();
 }
 
+function calculateScore(){
+    let score=accuracySamples.reduce((a,b)=>a+b,0)/accuracySamples.length;
+    const rotations=Math.abs(totalAngle)/(Math.PI*2);
 
-// =====================================================
-// ÉVALUATION
-// =====================================================
+    if(rotations<.95)score-=(.95-rotations)*10;
 
-function evaluateCircle() {
-
-    /*
-        On calcule le centre géométrique du dessin.
-    */
-
-    let centerX = 0;
-    let centerY = 0;
-
-    for (const p of points) {
-
-        centerX += p.x;
-        centerY += p.y;
-    }
-
-    centerX /= points.length;
-    centerY /= points.length;
-
-
-    /*
-        On calcule tous les rayons.
-    */
-
-    const radii = points.map(p => {
-
-        return Math.hypot(
-            p.x - centerX,
-            p.y - centerY
-        );
-    });
-
-
-    /*
-        Rayon médian.
-        La médiane est plus robuste qu'une simple moyenne.
-    */
-
-    const sorted =
-        [...radii].sort((a,b) => a-b);
-
-    const medianRadius =
-        sorted[Math.floor(sorted.length / 2)];
-
-
-    if (medianRadius < 20) {
-
-        statusElement.textContent =
-            "Cercle trop petit.";
-
-        return;
-    }
-
-
-    /*
-        On remet le dessin dans un ordre angulaire.
-
-        C'est très important :
-
-        un cercle parfait doit avoir
-        quasiment le même rayon dans
-        toutes les directions.
-    */
-
-    const angularSamples = 180;
-
-    const samples =
-        new Array(angularSamples).fill(null);
-
-
-    for (const p of points) {
-
-        let angle =
-            Math.atan2(
-                p.y - centerY,
-                p.x - centerX
-            );
-
-        if (angle < 0)
-            angle += Math.PI * 2;
-
-
-        const index =
-            Math.floor(
-                angle /
-                (Math.PI * 2) *
-                angularSamples
-            );
-
-
-        const radius =
-            Math.hypot(
-                p.x - centerX,
-                p.y - centerY
-            );
-
-
-        if (
-            index >= 0 &&
-            index < angularSamples
-        ) {
-
-            if (samples[index] === null) {
-
-                samples[index] = [];
-
-            }
-
-            samples[index].push(radius);
-        }
-    }
-
-
-    /*
-        Moyenne de chaque direction.
-    */
-
-    const profile = [];
-
-    for (let i = 0; i < angularSamples; i++) {
-
-        if (
-            samples[i] &&
-            samples[i].length
-        ) {
-
-            const average =
-                samples[i].reduce(
-                    (a,b) => a+b,
-                    0
-                ) /
-                samples[i].length;
-
-            profile.push(average);
-
-        } else {
-
-            profile.push(null);
-        }
-    }
-
-
-    /*
-        Interpolation des trous.
-    */
-
-    for (let i = 0; i < angularSamples; i++) {
-
-        if (profile[i] === null) {
-
-            let before = i - 1;
-            let after = i + 1;
-
-            while (
-                before >= 0 &&
-                profile[before] === null
-            ) {
-                before--;
-            }
-
-            while (
-                after < angularSamples &&
-                profile[after] === null
-            ) {
-                after++;
-            }
-
-            if (
-                before >= 0 &&
-                after < angularSamples
-            ) {
-
-                profile[i] =
-                    (
-                        profile[before] +
-                        profile[after]
-                    ) / 2;
-
-            } else {
-
-                profile[i] =
-                    medianRadius;
-            }
-        }
-    }
-
-
-    // =================================================
-    // ERREUR RADIALE
-    // =================================================
-
-    let radialError = 0;
-
-    for (const radius of profile) {
-
-        radialError +=
-            Math.abs(
-                radius -
-                medianRadius
-            );
-    }
-
-    radialError /=
-        profile.length;
-
-
-    /*
-        Pour un vrai cercle :
-
-        radialError ≈ 0
-
-        Pour un carré :
-
-        radialError est beaucoup plus grand.
-    */
-
-    let circularityScore =
-        100 -
-        (
-            radialError /
-            medianRadius
-        ) * 180;
-
-
-    circularityScore =
-        Math.max(
-            0,
-            Math.min(
-                100,
-                circularityScore
-            )
-        );
-
-
-    // =================================================
-    // VARIATION DU RAYON
-    // =================================================
-
-    let smoothnessError = 0;
-
-    for (
-        let i = 0;
-        i < angularSamples;
-        i++
-    ) {
-
-        const current =
-            profile[i];
-
-        const next =
-            profile[
-                (i + 1) %
-                angularSamples
-            ];
-
-        smoothnessError +=
-            Math.abs(
-                current - next
-            );
-    }
-
-
-    smoothnessError /=
-        angularSamples;
-
-
-    let smoothnessScore =
-        100 -
-        (
-            smoothnessError /
-            medianRadius
-        ) * 500;
-
-
-    smoothnessScore =
-        Math.max(
-            0,
-            Math.min(
-                100,
-                smoothnessScore
-            )
-        );
-
-
-    // =================================================
-    // NOMBRE DE TOURS
-    // =================================================
-
-    const angles =
-        points.map(p => {
-
-            let a =
-                Math.atan2(
-                    p.y - centerY,
-                    p.x - centerX
-                );
-
-            if (a < 0)
-                a += Math.PI * 2;
-
-            return a;
-        });
-
-
-    let totalAngle = 0;
-
-
-    for (
-        let i = 1;
-        i < angles.length;
-        i++
-    ) {
-
-        let diff =
-            angles[i] -
-            angles[i - 1];
-
-
-        if (diff > Math.PI)
-            diff -= Math.PI * 2;
-
-        if (diff < -Math.PI)
-            diff += Math.PI * 2;
-
-
-        totalAngle += diff;
-    }
-
-
-    const rotations =
-        Math.abs(totalAngle) /
-        (Math.PI * 2);
-
-
-    /*
-        Il faut au minimum faire environ
-        80% d'un tour.
-    */
-
-    if (rotations < 0.80) {
-
-        statusElement.textContent =
-            "Continue ton cercle...";
-
-        return;
-    }
-
-
-    // =================================================
-    // SCORE FINAL
-    // =================================================
-
-    let score =
-        circularityScore * 0.75 +
-        smoothnessScore * 0.25;
-
-
-    /*
-        Petit bonus pour un tour complet.
-    */
-
-    if (rotations >= 0.95) {
-
-        score += 2;
-
-    } else {
-
-        score -=
-            (0.95 - rotations) * 15;
-    }
-
-
-    score =
-        Math.max(
-            0,
-            Math.min(
-                100,
-                score
-            )
-        );
-
-
-    score =
-        Math.round(
-            score * 100
-        ) / 100;
-
+    score=Math.max(0,Math.min(100,score));
+    score=Math.round(score*100)/100;
 
     showResult(score);
 }
 
+function showResult(score){
+    scoreElement.textContent=score.toFixed(2)+"%";
 
-// =====================================================
-// RESULTAT
-// =====================================================
+    let color,message;
 
-function showResult(score) {
-
-    scoreElement.textContent =
-        score.toFixed(2) + "%";
-
-
-    if (score >= 98) {
-
-        scoreElement.style.color =
-            "#22c55e";
-
-        messageElement.textContent =
-            "PERFECT ! 🎯";
-
+    if(score>=GREEN){
+        color="#22c55e";
+        message=score>=98?"PERFECT ! 🎯":"Excellent cercle ! 🔥";
+    }else if(score>=YELLOW){
+        color="#eab308";message="Très bien !";
+    }else if(score>=ORANGE){
+        color="#f97316";message="Pas mal !";
+    }else{
+        color="#ef4444";
+        message="Essaie de garder une distance plus régulière.";
     }
 
-    else if (score >= 95) {
-
-        scoreElement.style.color =
-            "#4ade80";
-
-        messageElement.textContent =
-            "Incroyable ! 🔥";
-
-    }
-
-    else if (score >= 90) {
-
-        scoreElement.style.color =
-            "#84cc16";
-
-        messageElement.textContent =
-            "Excellent cercle !";
-
-    }
-
-    else if (score >= 75) {
-
-        scoreElement.style.color =
-            "#eab308";
-
-        messageElement.textContent =
-            "Très bien !";
-
-    }
-
-    else if (score >= 50) {
-
-        scoreElement.style.color =
-            "#f97316";
-
-        messageElement.textContent =
-            "Pas mal, mais tu peux faire mieux.";
-
-    }
-
-    else {
-
-        scoreElement.style.color =
-            "#ef4444";
-
-        messageElement.textContent =
-            "Essaie de faire une forme plus circulaire.";
-    }
-
-
-    result.style.display =
-        "flex";
-
-    statusElement.textContent =
-        "Cercle terminé !";
+    scoreElement.style.color=color;
+    messageElement.textContent=message;
+    result.style.display="flex";
+    accuracyElement.textContent="Terminé";
+    statusElement.textContent="Cercle terminé !";
 }
 
-
-// =====================================================
-// REJOUER
-// =====================================================
-
-function restart() {
-
-    result.style.display =
-        "none";
-
-    drawing = false;
-
-    points = [];
-
-    ctx.clearRect(
-        0,
-        0,
-        canvas.width,
-        canvas.height
-    );
-
-    statusElement.textContent =
-        "Commence à dessiner...";
+function restart(){
+    result.style.display="none";
+    drawing=false;
+    points=[];accuracySamples=[];playerRadius=0;
+    totalAngle=0;previousAngle=null;
+    drawBackground();drawCenterPoint();
+    accuracyElement.textContent="Prêt";
+    accuracyElement.style.color="#d1d5db";
+    statusElement.textContent="Commence à dessiner...";
 }
 
+restartButton.addEventListener("click",restart);
 
-// =====================================================
-// SOURIS
-// =====================================================
+canvas.addEventListener("mousedown",startDrawing);
+canvas.addEventListener("mousemove",draw);
+window.addEventListener("mouseup",stopDrawing);
 
-canvas.addEventListener(
-    "mousedown",
-    startDrawing
-);
+canvas.addEventListener("touchstart",startDrawing,{passive:false});
+canvas.addEventListener("touchmove",draw,{passive:false});
+canvas.addEventListener("touchend",stopDrawing,{passive:false});
 
-canvas.addEventListener(
-    "mousemove",
-    draw
-);
+window.addEventListener("resize",resizeCanvas);
 
-window.addEventListener(
-    "mouseup",
-    stopDrawing
-);
-
-
-// =====================================================
-// TACTILE
-// =====================================================
-
-canvas.addEventListener(
-    "touchstart",
-    startDrawing,
-    { passive: false }
-);
-
-canvas.addEventListener(
-    "touchmove",
-    draw,
-    { passive: false }
-);
-
-canvas.addEventListener(
-    "touchend",
-    stopDrawing,
-    { passive: false }
-);
-
+resizeCanvas();
+drawBackground();
+drawCenterPoint();
 </script>
 
 </body>
